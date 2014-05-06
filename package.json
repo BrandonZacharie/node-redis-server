@@ -1,7 +1,7 @@
 {
   "name": "redis-server",
   "description": "Start and stop a Redis server.",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "author": {
     "name": "Brandon Zacharie",
     "email": "brandon.zacharie@pilcrow.co"
