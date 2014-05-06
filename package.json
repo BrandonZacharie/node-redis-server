@@ -1,0 +1,25 @@
+{
+  "name": "redis-server",
+  "description": "Start and stop a Redis server.",
+  "version": "0.0.0",
+  "author": {
+    "name": "Brandon Zacharie",
+    "email": "brandon.zacharie@pilcrow.co"
+  },
+  "engines": {
+    "node": "0.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PilcrowCo/node-redis-server.git"
+  },
+  "keywords": ["redis", "server", "manager"],
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha --bail --reporter list test.js"
+  },
+  "main": "./redis-server.js",
+  "devDependencies": {
+    "mocha": "1.x",
+    "expect.js": "0.x"
+  }
+}
