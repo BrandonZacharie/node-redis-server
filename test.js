@@ -8,7 +8,7 @@ describe('redis-server', function () {
       , server1, server2;
 
     it('should start a server', function (done) {
-        server1 = new RedisServer(port);
+        server1 = new RedisServer({ port: port });
 
         expect(server1.pid).to.be(null);
         expect(server1.port).to.be(null);
