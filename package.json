@@ -7,7 +7,7 @@
     "email": "brandon.zacharie@pilcrow.co"
   },
   "engines": {
-    "node": "0.x"
+    "node": ">=0.10.x"
   },
   "repository": {
     "type": "git",
