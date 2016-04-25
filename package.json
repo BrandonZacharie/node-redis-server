@@ -13,13 +13,17 @@
     "type": "git",
     "url": "https://github.com/PilcrowCo/node-redis-server.git"
   },
-  "keywords": ["redis", "server", "manager"],
+  "keywords": [
+    "redis",
+    "server",
+    "manager"
+  ],
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha --bail --reporter list test.js"
   },
   "main": "./redis-server.js",
   "devDependencies": {
-    "mocha": "1.x",
-    "expect.js": "0.x"
+    "expect.js": "0.x",
+    "mocha": "^2.4.5"
   }
 }
