@@ -4,7 +4,14 @@ var childProcess = require('child_process')
   , keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig
   , strRE = / /ig;
 
+var DEFAULT_PORT = 6379;
+
 function RedisServer(configOrPort) {
+    
+    if (typeof configOrPort === 'undefined') {
+        configOrPort = DEFAULT_PORT;
+    }
+    
     this.config = typeof configOrPort === 'number' ? { port: configOrPort } : (configOrPort || {});
     this.pid = null;
     this.port = null;
