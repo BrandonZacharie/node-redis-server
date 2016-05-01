@@ -1,7 +1,7 @@
 {
   "name": "redis-server",
   "description": "Start and stop a Redis server.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": {
     "name": "Brandon Zacharie",
     "email": "brandon.zacharie@pilcrow.co"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/PilcrowCo/node-redis-server.git"
+    "url": "https://github.com/BrandonZacharie/node-redis-server.git"
   },
   "keywords": [
     "redis",
