@@ -5,7 +5,7 @@ var expect = require('expect.js')
 
 describe('redis-server', function () {
     var port = Math.floor(Math.random() * 10000) + 9000
-      , server1, server2;
+      , server1, server2, server3;
 
     it('should start a server', function (done) {
         server1 = new RedisServer({ port: port });
@@ -118,5 +118,31 @@ describe('redis-server', function () {
         expect(server2.isRunning).to.be(false);
         expect(server2.isClosing).to.be(false);
         expect(server2.process).to.be(null);
+    });
+    it('should start a server with no config provided', function(done) {
+        server3 = new RedisServer();       
+
+        expect(server3.pid).to.be(null);
+        expect(server3.port).to.be(null);
+        expect(server3.process).to.be(null);
+        expect(server3.isOpening).to.be(false);
+        expect(server3.isClosing).to.be(false);
+        expect(server3.open(done)).to.be(true);
+        expect(server3.isOpening).to.be(true);
+    });
+    it('should use port 6379 when no config is provided', function () {
+        expect(server3.isOpening).to.be(false);
+        expect(server3.isRunning).to.be(true);
+        expect(server3.isClosing).to.be(false);
+        expect(server3.pid).to.be.a('number');
+        expect(server3.port).to.be(6379);
+        expect(server3.process).to.not.be(null);
+    });
+    it('should stop a server with no config', function (done) {
+        expect(server3.isOpening).to.be(false);
+        expect(server3.isRunning).to.be(true);
+        expect(server3.isClosing).to.be(false);
+        expect(server3.close(done)).to.be(true);
+        expect(server3.isClosing).to.be(true);
     });
 });
