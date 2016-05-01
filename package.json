@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/PilcrowCo/node-redis-server.git"
+    "url": "https://github.com/BrandonZacharie/node-redis-server.git"
   },
   "keywords": [
     "redis",
