@@ -8,29 +8,47 @@ Start a Redis server in Node.js like a boss.
 
 ## Usage
 
-Most basic usage is to simply pass the port that you want to run the server. It
-is important to not forget to construct the server without the ```new```
-keyword, unless global access to the redis-server properties is required.
+The constructor exported by this module optionally accepts a single argument; a number or string that is a port or an object for configuration.
 
-```javascript
+### Basic Example
+```
+const RedisServer = require('redis-server');
 
-var RedisServer = require('redis-server');
-var redisServerInstance = new RedisServer(6379);
+// Simply pass the port that you want a Redis server to listen on.
+const server = new RedisServer(6379);
 
-redisServerInstance.open(function (error) {
-
-  if (error) {
-    throw new Error(error);
+server.open((err) => {
+  if (err === null) {
+    // You may now connect a client to the server bound to port 6379.
   }
+});
+```
 
-  // The server is now up and running on port 6379,
-  // you can now create a client to connect to the
-  // server
+### Configuration
 
+| Property | Type   | Default        | Description
+|:---------|:-------|:---------------|:-----------
+| port     | Number | 6379           | A port to bind a server to.
+| path     | String | redis-server   | A path to a Redis server binary.
+
+```
+const RedisServer = require('redis-server');
+
+// Provide a configuration object. All properties are optional.
+const server = new RedisServer({
+  port: 6379,
+  path: '/opt/local/bin/redis-server'
 });
 
+server.open((err) => {
+  if (err === null) {
+    // You may now connect a client to the server bound to port 6379.
+  }
+});
 ```
 
 ## TODO
 
-more tests/documentation!
+- Add Promises
+- Custom config paths (i.e. "/etc/redis/6379.conf")
+- Support "--slaveof" flag
