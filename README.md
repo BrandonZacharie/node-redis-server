@@ -34,7 +34,7 @@ server.open((err) => {
 | Property | Type   | Default        | Description
 |:---------|:-------|:---------------|:-----------
 | port     | Number | 6379           | A port to bind a server to.
-| path     | String | redis-server   | A path to a Redis server binary.
+| bin      | String | redis-server   | A path to a Redis server binary.
 
 A Redis server binary must be available. If you do not have one in $PATH,
 provide a path in configuration.
@@ -45,7 +45,7 @@ const RedisServer = require('redis-server');
 // Provide a configuration object. All properties are optional.
 const server = new RedisServer({
   port: 6379,
-  path: '/opt/local/bin/redis-server'
+  bin: '/opt/local/bin/redis-server'
 });
 
 server.open((err) => {

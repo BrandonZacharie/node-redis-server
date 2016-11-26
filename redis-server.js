@@ -4,7 +4,7 @@
  * Represents configuration options for `RedisServer`.
  * @typedef {Object} Config
  * @property {(Number|String)} [port=6379]
- * @property {String} [path='redis-server']
+ * @property {String} [bin='redis-server']
  */
 
 /**
@@ -31,7 +31,7 @@ module.exports = class RedisServer {
      * @private
      * @type {Config}
      */
-    this.config = { port: 6379, path: 'redis-server' };
+    this.config = { port: 6379, bin: 'redis-server' };
 
     /**
      * The current process ID.
@@ -93,8 +93,8 @@ module.exports = class RedisServer {
       this.config.port = configOrPort.port;
     }
 
-    if (configOrPort.path != null) {
-      this.config.path = configOrPort.path;
+    if (configOrPort.bin != null) {
+      this.config.bin = configOrPort.bin;
     }
   }
 
@@ -114,7 +114,7 @@ module.exports = class RedisServer {
 
     const flags = ['--port', this.config.port];
 
-    this.process = childprocess.spawn(this.config.path, flags);
+    this.process = childprocess.spawn(this.config.bin, flags);
     this.isOpening = true;
 
     const matchHandler = (value) => {

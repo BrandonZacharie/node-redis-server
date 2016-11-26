@@ -11,11 +11,11 @@ const it = mocha.it;
 describe('redis-server', () => {
   let port = Math.floor(Math.random() * 10000) + 9000;
   let server1, server2, server3, server4;
-  let path = null;
+  let bin = null;
 
   before((done) => {
     childprocess.exec('which redis-server', (err, stdout, stderr) => {
-      path = stdout.trim();
+      bin = stdout.trim();
 
       done(err);
     });
@@ -159,9 +159,9 @@ describe('redis-server', () => {
     expect(server3.isClosing).to.equal(true);
   });
   it('should start a server with a binary path provided', (done) => {
-    server4 = new RedisServer({ path });
+    server4 = new RedisServer({ bin });
 
-    expect(server4.config.path).to.equal(path);
+    expect(server4.config.bin).to.equal(bin);
     expect(server4.pid).to.equal(null);
     expect(server4.port).to.equal(null);
     expect(server4.process).to.equal(null);
