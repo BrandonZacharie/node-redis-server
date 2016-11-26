@@ -1,124 +1,175 @@
-"use strict";
+'use strict';
 
-var childProcess = require('child_process')
-  , keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig
-  , strRE = / /ig;
+/**
+ * Represents configuration options for `RedisServer`.
+ * @typedef {Object} Config
+ * @property {(Number|String)} [port=6379]
+ * @property {String} [path='redis-server']
+ */
 
-var DEFAULT_PORT = 6379;
+ /**
+  * A function invoked when an operation (i.e. `open()`) completes.
+  * @typedef {Function} RedisServer~callback
+  */
 
-function RedisServer(configOrPort) {
-    
-    if (typeof configOrPort === 'undefined') {
-        configOrPort = DEFAULT_PORT;
-    }
-    
-    this.config = typeof configOrPort === 'number' ? { port: configOrPort } : (configOrPort || {});
+const childprocess = require('child_process');
+const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig;
+const strRE = / /ig;
+
+/**
+ * Start and stop a Redis server like a boss.
+ * @class
+ */
+module.exports = class RedisServer {
+  /**
+   * Construct a new `RedisServer`.
+   * @argument {(Number|Config)} [configOrPort]
+   */
+  constructor(configOrPort) {
+    this.config = { port: 6379 };
     this.pid = null;
     this.port = null;
     this.process = null;
     this.isClosing = false;
     this.isRunning = false;
     this.isOpening = false;
-}
 
-RedisServer.prototype.open = function RedisServer_prototype_open(callback) {
-    if (this.isOpening || this.process !== null) {
-        if (callback) {
-            callback(null);
-        }
-
-        return false;
+    if (configOrPort == null) {
+      return;
     }
 
-    var self = this;
+    if (typeof configOrPort === 'number') {
+      this.config.port = configOrPort;
 
-    this.process = childProcess.spawn('redis-server', ['--port', this.config.port]);
+      return;
+    }
+
+    if (typeof configOrPort === 'object') {
+      if (configOrPort.port != null) {
+        this.config.port = configOrPort.port;
+      }
+    }
+  }
+
+  /**
+   * Start a redis server.
+   * @argument {RedisServer~callback}
+   * @return {Boolean}
+   */
+  open(callback) {
+    if (this.isOpening || this.process !== null) {
+      if (callback) {
+        callback(null);
+      }
+
+      return false;
+    }
+
+    const flags = ['--port', this.config.port];
+
+    this.process = childprocess.spawn('redis-server', flags);
     this.isOpening = true;
 
-    function parse(value) {
-        var t = value.split(':')
-          , k = t[0].toLowerCase().replace(strRE, '')
-          , err = null;
+    const matchHandler = (value) => {
+      const t = value.split(':');
+      const k = t[0].replace(strRE, '').toLowerCase();
+      const v = t[1];
+      let err = null;
 
-        switch (k) {
-            case 'alreadyinuse':
-                err = new Error('Address already in use');
+      switch (k) {
+        case 'alreadyinuse':
+          err = new Error('Address already in use');
+          err.code = -1;
 
-                break;
+          break;
 
-            case 'denied':
-                err = new Error('Permission denied');
+        case 'denied':
+          err = new Error('Permission denied');
+          err.code = -2;
 
-                break;
+          break;
 
-            case 'error':
-            case 'notlisten':
-                err = new Error('Invalid port number');
+        case 'error':
+        case 'notlisten':
+          err = new Error('Invalid port number');
+          err.code = -3;
 
-                break;
-            
-            case 'pid':
-            case 'port':
-                self[k] = Number(t[1]);
+          break;
 
-                if (!(self.port === null || self.pid === null)) {
-                    self.isRunning = true;
+        case 'pid':
+        case 'port':
+          this[k] = Number(v);
 
-                    break;
-                }
-            
-            default:
-                return;
+          if (!(this.port === null || this.pid === null)) {
+            this.isRunning = true;
+
+            break;
+          }
+
+        default:
+          return false;
+      }
+
+      this.isOpening = false;
+
+      if (callback) {
+        callback(err);
+      }
+
+      return true;
+    };
+
+    const dataHandler = (value) => {
+      const matches = value.toString().match(keyRE);
+
+      if (matches !== null) {
+        for (let match of matches) {
+          if (matchHandler(match)) {
+            this.process.stdout.removeListener('data', dataHandler);
+
+            return;
+          }
         }
+      }
+    };
 
-        self.isOpening = false;
-
-        if (callback) {
-            callback(err);
-        }
-    }
-
-    this.process.stdout.on('data', function (data) {
-        var matches = data.toString().match(keyRE);
-
-        if (matches !== null) {
-            matches.forEach(parse);
-        }
+    this.process.stdout.on('data', dataHandler);
+    this.process.on('close', () => {
+      this.process = null;
+      this.isRunning = false;
+      this.isClosing = false;
     });
-
-    this.process.on('close', function () {
-        self.process = null;
-        self.isRunning = false;
-        self.isClosing = false;
-    });
-
-    process.on('exit', function () {
-        self.close();
+    process.on('exit', () => {
+      this.close();
     });
 
     return true;
-};
+  }
 
-RedisServer.prototype.close = function RedisServer_prototype_close(callback) {
+  /**
+   * Stop a redis server.
+   * @argument {RedisServer~callback}
+   * @return {Boolean}
+   */
+  close(callback) {
     if (this.isClosing || this.process === null) {
-        if (callback) {
-            callback(null);
-        }
+      if (callback) {
+        callback(null);
+      }
 
-        return false;
+      return false;
     }
 
     this.isClosing = true;
 
     if (callback) {
-        this.process.on('close', function () {
-            callback(null);
-        });
+      this.process.on('close', () => {
+        callback(null);
+      });
     }
 
     this.process.kill();
 
     return true;
+  }
 };
-
-module.exports = RedisServer;

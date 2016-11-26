@@ -1,0 +1,15 @@
+language: node_js
+node_js:
+- '4.0'
+- '6.9'
+- '7.1'
+sudo: false
+script: npm test
+notifications:
+  email: false
+  slack:
+    secure: jI3gt+t9s6NRCuMnEfQKqNziWpTVxKMAv2sXIukDzNgBzTl70oZcn4gGOoD+JWfPBDZV/3UFrKh3kEBKfIcfMbFaudfxPZLxeXwTtzvOxq1AfdH8mAZwqwSCtDu+1g6KfHtbyEHfJvJZGWKuGDgJUKq5rrkeU8v5rCALFZQbDKo=
+branches:
+  only:
+  - master
+  - develop
