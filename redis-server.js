@@ -26,12 +26,53 @@ module.exports = class RedisServer {
    * @argument {(Number|Config)} [configOrPort]
    */
   constructor(configOrPort) {
+    /**
+     * Configuration options.
+     * @private
+     * @type {Config}
+     */
     this.config = { port: 6379, path: 'redis-server' };
+
+    /**
+     * The current process ID.
+     * @private
+     * @type {Number}
+     */
     this.pid = null;
+
+    /**
+     * The port the Redis server is currently bound to.
+     * @private
+     * @type {Number}
+     */
     this.port = null;
+
+    /**
+     * The current process.
+     * @private
+     * @type {Object}
+     */
     this.process = null;
+
+    /**
+     * Determine if the instance is closing a Redis server; true while a process
+     * is being killed until the contained Redis server closes.
+     * @type {Boolean}
+     */
     this.isClosing = false;
+
+    /**
+     * Determine if the instance is starting a Redis server; true while a
+     * process is spawning until a Redis server starts or errs.
+     * @type {Boolean}
+     */
     this.isRunning = false;
+
+    /**
+     * Determine if the instance is running a Redis server; true once a process
+     * has spawned and the contained Redis server is ready to service requests.
+     * @type {Boolean}
+     */
     this.isOpening = false;
 
     if (configOrPort == null) {

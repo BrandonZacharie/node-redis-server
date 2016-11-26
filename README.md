@@ -12,7 +12,8 @@ Start and stop a local Redis server in Node.js like a boss.
 
 ## Usage
 
-The constructor exported by this module optionally accepts a single argument; a number or string that is a port or an object for configuration.
+The constructor exported by this module optionally accepts a single argument;
+a number or string that is a port or an object for configuration.
 
 ### Basic Example
 ```
@@ -35,7 +36,8 @@ server.open((err) => {
 | port     | Number | 6379           | A port to bind a server to.
 | path     | String | redis-server   | A path to a Redis server binary.
 
-A Redis server binary must be available. If you do not have one in $PATH, provide a path in configuration.
+A Redis server binary must be available. If you do not have one in $PATH,
+provide a path in configuration.
 
 ```
 const RedisServer = require('redis-server');
@@ -57,11 +59,30 @@ server.open((err) => {
 
 #### RedisServer#open(callback)
 
-Attempt to open a Redis server. If `callback` is provided, it receives an `Error` instance if a problem is detected and a `Boolean` is returned; `true`, iff a process is spawned.
+Attempt to open a Redis server. If `callback` is provided, it receives an
+`Error` instance if a problem is detected and a `Boolean` is returned; `true`,
+iff a process is spawned.
 
 #### RedisServer#close(callback)
 
-Close a Redis server. If `callback` is provided, it receives an `Error` instance if a problem is detected and a `Boolean` is returned; `true`, iff a process is killed.
+Close a Redis server. If `callback` is provided, it receives an `Error` instance
+if a problem is detected and a `Boolean` is returned; `true`, iff a process is
+killed.
+
+#### RedisServer#isOpening
+
+Determine if the instance is starting a Redis server; `true` while a
+process is spawning until a Redis server starts or errs.
+
+#### RedisServer#isRunning
+
+Determine if the instance is running a Redis server; `true` once a process
+has spawned and the contained Redis server is ready to service requests.
+
+#### RedisServer#isClosing
+
+Determine if the instance is closing a Redis server; `true` while a
+process is being killed until the contained Redis server closes.
 
 ## TODO
 
