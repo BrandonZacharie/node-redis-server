@@ -2,6 +2,7 @@
   "name": "redis-server",
   "description": "Start and stop a Redis server.",
   "version": "0.1.0",
+  "license": "MIT",
   "author": {
     "name": "Brandon Zacharie",
     "email": "brandon.zacharie@gmail.com"
