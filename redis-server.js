@@ -26,7 +26,7 @@ module.exports = class RedisServer {
    * @argument {(Number|Config)} [configOrPort]
    */
   constructor(configOrPort) {
-    this.config = { port: 6379 };
+    this.config = { port: 6379, path: 'redis-server' };
     this.pid = null;
     this.port = null;
     this.process = null;
@@ -44,10 +44,16 @@ module.exports = class RedisServer {
       return;
     }
 
-    if (typeof configOrPort === 'object') {
-      if (configOrPort.port != null) {
-        this.config.port = configOrPort.port;
-      }
+    if (typeof configOrPort !== 'object') {
+      return;
+    }
+
+    if (configOrPort.port != null) {
+      this.config.port = configOrPort.port;
+    }
+
+    if (configOrPort.path != null) {
+      this.config.path = configOrPort.path;
     }
   }
 
@@ -67,7 +73,7 @@ module.exports = class RedisServer {
 
     const flags = ['--port', this.config.port];
 
-    this.process = childprocess.spawn('redis-server', flags);
+    this.process = childprocess.spawn(this.config.path, flags);
     this.isOpening = true;
 
     const matchHandler = (value) => {
@@ -136,6 +142,8 @@ module.exports = class RedisServer {
     this.process.stdout.on('data', dataHandler);
     this.process.on('close', () => {
       this.process = null;
+      this.port = null;
+      this.pid = null;
       this.isRunning = false;
       this.isClosing = false;
     });
