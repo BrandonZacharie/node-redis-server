@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "test": "./node_modules/.bin/mocha --bail --reporter list test",
-    "ci": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --bail --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls && rm -rf ./coverage"
+    "test+coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --bail --report lcovonly",
+    "ci": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --bail --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
   },
   "main": "./redis-server.js",
   "devDependencies": {
