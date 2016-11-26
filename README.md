@@ -2,6 +2,9 @@
 
 Start a Redis server in Node.js like a boss.
 
+[![NPM version](https://badge.fury.io/js/redis-server.svg)](http://badge.fury.io/js/redis-server)
+[![Build Status](https://travis-ci.org/BrandonZacharie/node-redis-server.svg?branch=master)](https://travis-ci.org/BrandonZacharie/node-redis-server)
+
 ## Installation
 
 ```npm install redis-server```
