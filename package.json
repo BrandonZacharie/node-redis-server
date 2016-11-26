@@ -20,11 +20,14 @@
     "manager"
   ],
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha --bail --reporter list test"
+    "test": "./node_modules/.bin/mocha --bail --reporter list test",
+    "ci": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --bail --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls && rm -rf ./coverage"
   },
   "main": "./redis-server.js",
   "devDependencies": {
     "chai": "^3.5.0",
+    "coveralls": "^2.11.15",
+    "istanbul": "^0.4.5",
     "mocha": "^3.1.2"
   }
 }
