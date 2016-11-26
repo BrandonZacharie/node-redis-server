@@ -7,10 +7,10 @@
  * @property {String} [path='redis-server']
  */
 
- /**
-  * A function invoked when an operation (i.e. `open()`) completes.
-  * @typedef {Function} RedisServer~callback
-  */
+/**
+ * A function invoked when an operation (i.e. `open()`) completes.
+ * @typedef {Function} RedisServer~callback
+ */
 
 const childprocess = require('child_process');
 const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig;

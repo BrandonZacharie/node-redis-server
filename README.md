@@ -1,9 +1,9 @@
 # redis-server
 
-Start a Redis server in Node.js like a boss.
-
 [![NPM version](https://badge.fury.io/js/redis-server.svg)](http://badge.fury.io/js/redis-server)
 [![Build Status](https://travis-ci.org/BrandonZacharie/node-redis-server.svg?branch=master)](https://travis-ci.org/BrandonZacharie/node-redis-server)
+
+Start and stop a local Redis server in Node.js like a boss.
 
 ## Installation
 
@@ -34,6 +34,8 @@ server.open((err) => {
 | port     | Number | 6379           | A port to bind a server to.
 | path     | String | redis-server   | A path to a Redis server binary.
 
+A Redis server binary must be available. If you do not have one in $PATH, provide a path in configuration.
+
 ```
 const RedisServer = require('redis-server');
 
@@ -49,6 +51,16 @@ server.open((err) => {
   }
 });
 ```
+
+### API
+
+#### RedisServer#open(callback)
+
+Attempt to open a Redis server. If `callback` is provided, it receives an `Error` instance if a problem is detected and a `Boolean` is returned; `true`, iff a process is spawned.
+
+#### RedisServer#close(callback)
+
+Close a Redis server. If `callback` is provided, it receives an `Error` instance if a problem is detected and a `Boolean` is returned; `true`, iff a process is killed.
 
 ## TODO
 
