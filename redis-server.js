@@ -5,6 +5,7 @@
  * @typedef {Object} Config
  * @property {(Number|String)} [port=6379]
  * @property {String} [bin='redis-server']
+ * @property {String} [conf=null]
  */
 
 /**
@@ -31,7 +32,7 @@ module.exports = class RedisServer {
      * @private
      * @type {Config}
      */
-    this.config = { port: 6379, bin: 'redis-server' };
+    this.config = { port: 6379, bin: 'redis-server', conf: null };
 
     /**
      * The current process ID.
@@ -89,6 +90,12 @@ module.exports = class RedisServer {
       return;
     }
 
+    if (configOrPort.conf != null) {
+      this.config.conf = configOrPort.conf;
+
+      return;
+    }
+
     if (configOrPort.port != null) {
       this.config.port = configOrPort.port;
     }
@@ -112,7 +119,14 @@ module.exports = class RedisServer {
       return false;
     }
 
-    const flags = ['--port', this.config.port];
+    const flags = [];
+
+    if (this.config.conf === null) {
+      flags.push('--port', this.config.port);
+    }
+    else {
+      flags.push(this.config.conf);
+    }
 
     this.process = childprocess.spawn(this.config.bin, flags);
     this.isOpening = true;

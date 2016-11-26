@@ -35,6 +35,7 @@ server.open((err) => {
 |:---------|:-------|:---------------|:-----------
 | port     | Number | 6379           | A port to bind a server to.
 | bin      | String | redis-server   | A path to a Redis server binary.
+| conf     | String |                | A path to a Redis server configuration file.
 
 A Redis server binary must be available. If you do not have one in $PATH,
 provide a path in configuration.
@@ -87,5 +88,4 @@ process is being killed until the contained Redis server closes.
 ## TODO
 
 - Add Promises
-- Custom config paths (i.e. "/etc/redis/6379.conf")
 - Support "--slaveof" flag

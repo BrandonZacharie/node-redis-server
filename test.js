@@ -10,7 +10,7 @@ const it = mocha.it;
 
 describe('redis-server', () => {
   let port = Math.floor(Math.random() * 10000) + 9000;
-  let server1, server2, server3, server4;
+  let server1, server2, server3, server4, server5;
   let bin = null;
 
   before((done) => {
@@ -176,5 +176,24 @@ describe('redis-server', () => {
     expect(server4.isClosing).to.equal(false);
     expect(server4.close(done)).to.equal(true);
     expect(server4.isClosing).to.equal(true);
+  });
+  it('should start a server with a conf path provided', (done) => {
+    server5 = new RedisServer({ conf: 'test.conf' });
+
+    expect(server5.pid).to.equal(null);
+    expect(server5.port).to.equal(null);
+    expect(server5.process).to.equal(null);
+    expect(server5.isOpening).to.equal(false);
+    expect(server5.isClosing).to.equal(false);
+    expect(server5.open(done)).to.equal(true);
+    expect(server5.isOpening).to.equal(true);
+  });
+  it('should stop a server with a conf path provided', (done) => {
+    expect(server5.isOpening).to.equal(false);
+    expect(server5.isRunning).to.equal(true);
+    expect(server5.isClosing).to.equal(false);
+    expect(server5.port).to.equal(6400);
+    expect(server5.close(done)).to.equal(true);
+    expect(server5.isClosing).to.equal(true);
   });
 });
