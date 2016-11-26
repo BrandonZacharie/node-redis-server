@@ -4,7 +4,7 @@ node_js:
 - '6.0'
 - '7.2'
 sudo: false
-script: npm test
+script: npm run ci
 notifications:
   email: false
   slack:
