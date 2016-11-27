@@ -3,13 +3,13 @@
 const childprocess = require('child_process');
 const chai = require('chai');
 const mocha = require('mocha');
-const RedisServer = require('./redis-server');
+const RedisServer = require('./RedisServer');
 const expect = chai.expect;
 const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
-describe('redis-server', () => {
+describe('RedisServer', () => {
   let port = Math.floor(Math.random() * 10000) + 9000;
   let server1, server2, server3, server4, server5;
   let bin = null;
