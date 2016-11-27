@@ -57,7 +57,7 @@ const server = new RedisServer({
 });
 ```
 
-### API
+### Methods
 
 #### RedisServer#open(callback)
 
@@ -70,6 +70,8 @@ iff a process is spawned.
 Close a Redis server. If `callback` is provided, it receives an `Error` instance
 if a problem is detected and a `Boolean` is returned; `true`, iff a process is
 killed.
+
+### Properties
 
 #### RedisServer#isOpening
 
@@ -85,6 +87,20 @@ has spawned and the contained Redis server is ready to service requests.
 
 Determine if the instance is closing a Redis server; `true` while a
 process is being killed until the contained Redis server closes.
+
+### Events
+
+#### stdout
+
+Emitted when a Redis server prints to stdout.
+
+#### open
+
+Emitted when a Redis server becomes ready to service requests.
+
+#### close
+
+Emitted when a Redis server closes.
 
 ## TODO
 

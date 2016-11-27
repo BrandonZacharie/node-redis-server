@@ -14,6 +14,7 @@
  */
 
 const childprocess = require('child_process');
+const events = require('events');
 const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig;
 const strRE = / /ig;
 
@@ -21,12 +22,13 @@ const strRE = / /ig;
  * Start and stop a Redis server like a boss.
  * @class
  */
-module.exports = class RedisServer {
+module.exports = class RedisServer extends events.EventEmitter {
   /**
    * Construct a new `RedisServer`.
    * @argument {(Number|Config)} [configOrPort]
    */
   constructor(configOrPort) {
+    super();
     /**
      * Configuration options.
      * @private
@@ -164,6 +166,8 @@ module.exports = class RedisServer {
           if (!(this.port === null || this.pid === null)) {
             this.isRunning = true;
 
+            this.emit('open');
+
             break;
           }
 
@@ -203,6 +207,12 @@ module.exports = class RedisServer {
       this.pid = null;
       this.isRunning = false;
       this.isClosing = false;
+    });
+    this.process.stdout.on('data', (data) => {
+      this.emit('stdout', data.toString());
+    });
+    this.process.on('close', () => {
+      this.emit('close');
     });
     process.on('exit', () => {
       this.close();
