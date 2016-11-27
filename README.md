@@ -42,17 +42,18 @@ provide a path in configuration.
 
 ```
 const RedisServer = require('redis-server');
-
-// Provide a configuration object. All properties are optional.
 const server = new RedisServer({
   port: 6379,
   bin: '/opt/local/bin/redis-server'
 });
+```
 
-server.open((err) => {
-  if (err === null) {
-    // You may now connect a client to the server bound to port 6379.
-  }
+You may use a Redis configuration file instead of configuration object properties that are flags (i.e. `port`). If `conf` is provided, no flags will be passed to the binary.
+
+```
+const RedisServer = require('redis-server');
+const server = new RedisServer({
+  conf: '/path/to/redis.conf'
 });
 ```
 
