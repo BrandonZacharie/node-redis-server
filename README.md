@@ -104,5 +104,4 @@ Emitted when a Redis server closes.
 
 ## TODO
 
-- Add Promises
 - Support "--slaveof" flag

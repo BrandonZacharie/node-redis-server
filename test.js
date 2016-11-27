@@ -11,7 +11,7 @@ const it = mocha.it;
 
 describe('RedisServer', () => {
   let port = Math.floor(Math.random() * 10000) + 9000;
-  let server1, server2, server3, server4, server5;
+  let server1, server2, server3, server4, server5, server6;
   let bin = null;
 
   const expectIdle = (server) => {
@@ -158,6 +158,17 @@ describe('RedisServer', () => {
       expectEmpty(server5);
       expectOpening(server5, done);
     });
+    it('should start a server and return a promise (server6)', () => {
+      server6 = new RedisServer({ port: ++port });
+
+      expectEmpty(server6);
+
+      const promise = expectOpening(server6);
+
+      expect(promise).to.be.a('promise');
+
+      return promise;
+    });
   });
   describe('#close()', () => {
     it('should stop a server (server1)', (done) => {
@@ -194,6 +205,14 @@ describe('RedisServer', () => {
     });
     it('should have stopped a server (server5)', () => {
       expectEmpty(server5);
+    });
+    it('should stop a server (server6)', () => {
+      expectRunning(server6);
+
+      return expectClosing(server6);
+    });
+    it('should have stopped a server (server6)', () => {
+      expectEmpty(server6);
     });
   });
 });

@@ -110,141 +110,162 @@ module.exports = class RedisServer extends events.EventEmitter {
   /**
    * Start a redis server.
    * @argument {RedisServer~callback}
-   * @return {Boolean}
+   * @return {Promise|Boolean}
    */
   open(callback) {
+    const canInvokeCallback = typeof callback === 'function';
+
     if (this.isOpening || this.process !== null) {
-      if (callback) {
-        callback(null);
+      if (!canInvokeCallback) {
+        return Promise.resolve(false);
       }
+
+      callback(null);
 
       return false;
     }
 
-    const flags = [];
+    const promise = new Promise((resolve, reject) => {
+      const flags = [];
 
-    if (this.config.conf === null) {
-      flags.push('--port', this.config.port);
-    }
-    else {
-      flags.push(this.config.conf);
-    }
+      if (this.config.conf === null) {
+        flags.push('--port', this.config.port);
+      }
+      else {
+        flags.push(this.config.conf);
+      }
 
-    this.process = childprocess.spawn(this.config.bin, flags);
-    this.isOpening = true;
+      this.process = childprocess.spawn(this.config.bin, flags);
+      this.isOpening = true;
 
-    const matchHandler = (value) => {
-      const t = value.split(':');
-      const k = t[0].replace(strRE, '').toLowerCase();
-      const v = t[1];
-      let err = null;
+      const matchHandler = (value) => {
+        const t = value.split(':');
+        const k = t[0].replace(strRE, '').toLowerCase();
+        const v = t[1];
+        let err = null;
 
-      switch (k) {
-        case 'alreadyinuse':
-          err = new Error('Address already in use');
-          err.code = -1;
-
-          break;
-
-        case 'denied':
-          err = new Error('Permission denied');
-          err.code = -2;
-
-          break;
-
-        case 'error':
-        case 'notlisten':
-          err = new Error('Invalid port number');
-          err.code = -3;
-
-          break;
-
-        case 'pid':
-        case 'port':
-          this[k] = Number(v);
-
-          if (!(this.port === null || this.pid === null)) {
-            this.isRunning = true;
-
-            this.emit('open');
+        switch (k) {
+          case 'alreadyinuse':
+            err = new Error('Address already in use');
+            err.code = -1;
 
             break;
-          }
 
-          return false;
+          case 'denied':
+            err = new Error('Permission denied');
+            err.code = -2;
 
-        default:
-          return false;
-      }
+            break;
 
-      this.isOpening = false;
+          case 'error':
+          case 'notlisten':
+            err = new Error('Invalid port number');
+            err.code = -3;
 
-      if (callback) {
-        callback(err);
-      }
+            break;
 
-      return true;
-    };
+          case 'pid':
+          case 'port':
+            this[k] = Number(v);
 
-    const dataHandler = (value) => {
-      const matches = value.toString().match(keyRE);
+            if (!(this.port === null || this.pid === null)) {
+              this.isRunning = true;
 
-      if (matches !== null) {
-        for (let match of matches) {
-          if (matchHandler(match)) {
-            this.process.stdout.removeListener('data', dataHandler);
+              this.emit('open');
 
-            return;
+              break;
+            }
+
+            return false;
+
+          default:
+            return false;
+        }
+
+        this.isOpening = false;
+
+        if (canInvokeCallback) {
+          callback(err);
+        }
+
+        if (err === null) {
+          resolve(true);
+        }
+        else {
+          reject(err);
+        }
+
+        return true;
+      };
+
+      const dataHandler = (value) => {
+        const matches = value.toString().match(keyRE);
+
+        if (matches !== null) {
+          for (let match of matches) {
+            if (matchHandler(match)) {
+              this.process.stdout.removeListener('data', dataHandler);
+
+              return;
+            }
           }
         }
-      }
-    };
+      };
 
-    this.process.stdout.on('data', dataHandler);
-    this.process.on('close', () => {
-      this.process = null;
-      this.port = null;
-      this.pid = null;
-      this.isRunning = false;
-      this.isClosing = false;
-    });
-    this.process.stdout.on('data', (data) => {
-      this.emit('stdout', data.toString());
-    });
-    this.process.on('close', () => {
-      this.emit('close');
-    });
-    process.on('exit', () => {
-      this.close();
+      this.process.stdout.on('data', dataHandler);
+      this.process.on('close', () => {
+        this.process = null;
+        this.port = null;
+        this.pid = null;
+        this.isRunning = false;
+        this.isClosing = false;
+
+        this.emit('close');
+      });
+      this.process.stdout.on('data', (data) => {
+        this.emit('stdout', data.toString());
+      });
+      process.on('exit', () => {
+        this.close();
+      });
     });
 
-    return true;
+    return canInvokeCallback ? true : promise;
   }
 
   /**
    * Stop a redis server.
    * @argument {RedisServer~callback}
-   * @return {Boolean}
+   * @return {Promise|Boolean}
    */
   close(callback) {
+    const canInvokeCallback = typeof callback === 'function';
+
     if (this.isClosing || this.process === null) {
-      if (callback) {
-        callback(null);
+      if (!canInvokeCallback) {
+        return Promise.resolve(false);
       }
+
+      callback(null);
 
       return false;
     }
 
-    this.isClosing = true;
+    const promise = new Promise((resolve) => {
+      this.isClosing = true;
 
-    if (callback) {
       this.process.on('close', () => {
-        callback(null);
+        if (canInvokeCallback) {
+          callback(null);
+        }
+        else {
+          resolve(true);
+        }
       });
-    }
 
-    this.process.kill();
+      this.process.kill();
+    });
 
-    return true;
+    return canInvokeCallback ? true : promise;
   }
 };
