@@ -16,7 +16,9 @@ The constructor exported by this module optionally accepts a single argument;
 a number or string that is a port or an object for configuration.
 
 ### Basic Example
-```
+
+```javascript
+
 const RedisServer = require('redis-server');
 
 // Simply pass the port that you want a Redis server to listen on.
@@ -27,49 +29,58 @@ server.open((err) => {
     // You may now connect a client to the server bound to port 6379.
   }
 });
+
 ```
 
 ### Configuration
 
-| Property | Type   | Default        | Description
-|:---------|:-------|:---------------|:-----------
-| port     | Number | 6379           | A port to bind a server to.
-| bin      | String | redis-server   | A path to a Redis server binary.
-| conf     | String |                | A path to a Redis server configuration file.
+| Property | Type   | Default      | Description
+|:---------|:-------|:-------------|:-----------
+| port     | Number | 6379         | A port to bind a server to.
+| bin      | String | redis-server | A path to a Redis server binary.
+| conf     | String |              | A path to a Redis server configuration file.
 
 A Redis server binary must be available. If you do not have one in $PATH,
 provide a path in configuration.
 
-```
+```javascript
+
 const RedisServer = require('redis-server');
 const server = new RedisServer({
   port: 6379,
   bin: '/opt/local/bin/redis-server'
 });
-```
-
-You may use a Redis configuration file instead of configuration object properties that are flags (i.e. `port`). If `conf` is provided, no flags will be passed to the binary.
 
 ```
+
+You may use a Redis configuration file instead of configuration object
+properties that are flags (i.e. `port`). If `conf` is provided, no flags will
+be passed to the binary.
+
+```javascript
+
 const RedisServer = require('redis-server');
 const server = new RedisServer({
   conf: '/path/to/redis.conf'
 });
+
 ```
 
 ### Methods
 
+Methods that accept `callback` will return a `Promise` when no `callback` is
+provided. `callback` will receive an `Error` as its first argument if a problem
+is detected.
+
 #### RedisServer#open(callback)
 
-Attempt to open a Redis server. If `callback` is provided, it receives an
-`Error` instance if a problem is detected and a `Boolean` is returned; `true`,
-iff a process is spawned.
+Attempt to open a Redis server. If `callback` is provided a `Boolean` is
+returned; `true`, iff a process is spawned.
 
 #### RedisServer#close(callback)
 
-Close a Redis server. If `callback` is provided, it receives an `Error` instance
-if a problem is detected and a `Boolean` is returned; `true`, iff a process is
-killed.
+Close a Redis server. If `callback` is provided, a `Boolean` is returned;
+`true`, iff a process is killed.
 
 ### Properties
 
