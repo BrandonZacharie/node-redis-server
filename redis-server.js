@@ -167,6 +167,8 @@ module.exports = class RedisServer {
             break;
           }
 
+          return false;
+
         default:
           return false;
       }

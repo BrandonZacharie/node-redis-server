@@ -5,6 +5,7 @@ const chai = require('chai');
 const mocha = require('mocha');
 const RedisServer = require('./redis-server');
 const expect = chai.expect;
+const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
@@ -14,7 +15,7 @@ describe('redis-server', () => {
   let bin = null;
 
   before((done) => {
-    childprocess.exec('which redis-server', (err, stdout, stderr) => {
+    childprocess.exec('which redis-server', (err, stdout) => {
       bin = stdout.trim();
 
       done(err);
