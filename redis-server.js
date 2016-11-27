@@ -4,15 +4,17 @@
  * Represents configuration options for `RedisServer`.
  * @typedef {Object} Config
  * @property {(Number|String)} [port=6379]
- * @property {String} [path='redis-server']
+ * @property {String} [bin='redis-server']
+ * @property {String} [conf=null]
  */
 
- /**
-  * A function invoked when an operation (i.e. `open()`) completes.
-  * @typedef {Function} RedisServer~callback
-  */
+/**
+ * A function invoked when an operation (i.e. `open()`) completes.
+ * @typedef {Function} RedisServer~callback
+ */
 
 const childprocess = require('child_process');
+const events = require('events');
 const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig;
 const strRE = / /ig;
 
@@ -20,18 +22,60 @@ const strRE = / /ig;
  * Start and stop a Redis server like a boss.
  * @class
  */
-module.exports = class RedisServer {
+module.exports = class RedisServer extends events.EventEmitter {
   /**
    * Construct a new `RedisServer`.
    * @argument {(Number|Config)} [configOrPort]
    */
   constructor(configOrPort) {
-    this.config = { port: 6379 };
+    super();
+    /**
+     * Configuration options.
+     * @private
+     * @type {Config}
+     */
+    this.config = { port: 6379, bin: 'redis-server', conf: null };
+
+    /**
+     * The current process ID.
+     * @private
+     * @type {Number}
+     */
     this.pid = null;
+
+    /**
+     * The port the Redis server is currently bound to.
+     * @private
+     * @type {Number}
+     */
     this.port = null;
+
+    /**
+     * The current process.
+     * @private
+     * @type {Object}
+     */
     this.process = null;
+
+    /**
+     * Determine if the instance is closing a Redis server; true while a process
+     * is being killed until the contained Redis server closes.
+     * @type {Boolean}
+     */
     this.isClosing = false;
+
+    /**
+     * Determine if the instance is starting a Redis server; true while a
+     * process is spawning until a Redis server starts or errs.
+     * @type {Boolean}
+     */
     this.isRunning = false;
+
+    /**
+     * Determine if the instance is running a Redis server; true once a process
+     * has spawned and the contained Redis server is ready to service requests.
+     * @type {Boolean}
+     */
     this.isOpening = false;
 
     if (configOrPort == null) {
@@ -44,10 +88,22 @@ module.exports = class RedisServer {
       return;
     }
 
-    if (typeof configOrPort === 'object') {
-      if (configOrPort.port != null) {
-        this.config.port = configOrPort.port;
-      }
+    if (typeof configOrPort !== 'object') {
+      return;
+    }
+
+    if (configOrPort.conf != null) {
+      this.config.conf = configOrPort.conf;
+
+      return;
+    }
+
+    if (configOrPort.port != null) {
+      this.config.port = configOrPort.port;
+    }
+
+    if (configOrPort.bin != null) {
+      this.config.bin = configOrPort.bin;
     }
   }
 
@@ -65,9 +121,16 @@ module.exports = class RedisServer {
       return false;
     }
 
-    const flags = ['--port', this.config.port];
+    const flags = [];
 
-    this.process = childprocess.spawn('redis-server', flags);
+    if (this.config.conf === null) {
+      flags.push('--port', this.config.port);
+    }
+    else {
+      flags.push(this.config.conf);
+    }
+
+    this.process = childprocess.spawn(this.config.bin, flags);
     this.isOpening = true;
 
     const matchHandler = (value) => {
@@ -103,8 +166,12 @@ module.exports = class RedisServer {
           if (!(this.port === null || this.pid === null)) {
             this.isRunning = true;
 
+            this.emit('open');
+
             break;
           }
+
+          return false;
 
         default:
           return false;
@@ -136,8 +203,16 @@ module.exports = class RedisServer {
     this.process.stdout.on('data', dataHandler);
     this.process.on('close', () => {
       this.process = null;
+      this.port = null;
+      this.pid = null;
       this.isRunning = false;
       this.isClosing = false;
+    });
+    this.process.stdout.on('data', (data) => {
+      this.emit('stdout', data.toString());
+    });
+    this.process.on('close', () => {
+      this.emit('close');
     });
     process.on('exit', () => {
       this.close();

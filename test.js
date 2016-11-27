@@ -1,16 +1,26 @@
 'use strict';
 
+const childprocess = require('child_process');
 const chai = require('chai');
 const mocha = require('mocha');
 const RedisServer = require('./redis-server');
 const expect = chai.expect;
+const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
 describe('redis-server', () => {
   let port = Math.floor(Math.random() * 10000) + 9000;
-  let server1, server2, server3;
+  let server1, server2, server3, server4, server5;
+  let bin = null;
 
+  before((done) => {
+    childprocess.exec('which redis-server', (err, stdout) => {
+      bin = stdout.trim();
+
+      done(err);
+    });
+  });
   it('should start a server', (done) => {
     server1 = new RedisServer({ port });
 
@@ -148,5 +158,43 @@ describe('redis-server', () => {
     expect(server3.isClosing).to.equal(false);
     expect(server3.close(done)).to.equal(true);
     expect(server3.isClosing).to.equal(true);
+  });
+  it('should start a server with a binary path provided', (done) => {
+    server4 = new RedisServer({ bin });
+
+    expect(server4.config.bin).to.equal(bin);
+    expect(server4.pid).to.equal(null);
+    expect(server4.port).to.equal(null);
+    expect(server4.process).to.equal(null);
+    expect(server4.isOpening).to.equal(false);
+    expect(server4.isClosing).to.equal(false);
+    expect(server4.open(done)).to.equal(true);
+    expect(server4.isOpening).to.equal(true);
+  });
+  it('should stop a server with a binary path provided', (done) => {
+    expect(server4.isOpening).to.equal(false);
+    expect(server4.isRunning).to.equal(true);
+    expect(server4.isClosing).to.equal(false);
+    expect(server4.close(done)).to.equal(true);
+    expect(server4.isClosing).to.equal(true);
+  });
+  it('should start a server with a conf path provided', (done) => {
+    server5 = new RedisServer({ conf: 'test.conf' });
+
+    expect(server5.pid).to.equal(null);
+    expect(server5.port).to.equal(null);
+    expect(server5.process).to.equal(null);
+    expect(server5.isOpening).to.equal(false);
+    expect(server5.isClosing).to.equal(false);
+    expect(server5.open(done)).to.equal(true);
+    expect(server5.isOpening).to.equal(true);
+  });
+  it('should stop a server with a conf path provided', (done) => {
+    expect(server5.isOpening).to.equal(false);
+    expect(server5.isRunning).to.equal(true);
+    expect(server5.isClosing).to.equal(false);
+    expect(server5.port).to.equal(6400);
+    expect(server5.close(done)).to.equal(true);
+    expect(server5.isClosing).to.equal(true);
   });
 });
