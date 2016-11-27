@@ -34,7 +34,12 @@ module.exports = class RedisServer extends events.EventEmitter {
      * @private
      * @type {Config}
      */
-    this.config = { port: 6379, bin: 'redis-server', conf: null };
+    this.config = {
+      bin: 'redis-server',
+      conf: null,
+      port: 6379,
+      slaveof: null,
+    };
 
     /**
      * The current process ID.
@@ -98,6 +103,10 @@ module.exports = class RedisServer extends events.EventEmitter {
       return;
     }
 
+    if (configOrPort.slaveof != null) {
+      this.config.slaveof = configOrPort.slaveof;
+    }
+
     if (configOrPort.port != null) {
       this.config.port = configOrPort.port;
     }
@@ -130,6 +139,10 @@ module.exports = class RedisServer extends events.EventEmitter {
 
       if (this.config.conf === null) {
         flags.push('--port', this.config.port);
+
+        if (this.config.slaveof !== null) {
+          flags.push('--slaveof', this.config.slaveof);
+        }
       }
       else {
         flags.push(this.config.conf);

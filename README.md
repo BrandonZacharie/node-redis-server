@@ -101,7 +101,3 @@ Emitted when a Redis server becomes ready to service requests.
 #### close
 
 Emitted when a Redis server closes.
-
-## TODO
-
-- Support "--slaveof" flag
