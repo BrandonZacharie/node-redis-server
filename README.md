@@ -16,7 +16,9 @@ The constructor exported by this module optionally accepts a single argument;
 a number or string that is a port or an object for configuration.
 
 ### Basic Example
-```
+
+```JavaScript
+
 const RedisServer = require('redis-server');
 
 // Simply pass the port that you want a Redis server to listen on.
@@ -24,52 +26,101 @@ const server = new RedisServer(6379);
 
 server.open((err) => {
   if (err === null) {
-    // You may now connect a client to the server bound to port 6379.
+    // You may now connect a client to the Redis
+    // server bound to `server.port` (e.g. 6379).
   }
 });
+
 ```
 
 ### Configuration
 
-| Property | Type   | Default        | Description
-|:---------|:-------|:---------------|:-----------
-| port     | Number | 6379           | A port to bind a server to.
-| bin      | String | redis-server   | A path to a Redis server binary.
-| conf     | String |                | A path to a Redis server configuration file.
+| Property | Type   | Default      | Description
+|:---------|:-------|:-------------|:-----------
+| port     | Number | 6379         | A port to bind a server to.
+| bin      | String | redis-server | A path to a Redis server binary.
+| conf     | String |              | A path to a Redis server configuration file.
 
 A Redis server binary must be available. If you do not have one in $PATH,
 provide a path in configuration.
 
-```
-const RedisServer = require('redis-server');
+```JavaScript
+
 const server = new RedisServer({
   port: 6379,
   bin: '/opt/local/bin/redis-server'
 });
-```
-
-You may use a Redis configuration file instead of configuration object properties that are flags (i.e. `port`). If `conf` is provided, no flags will be passed to the binary.
 
 ```
-const RedisServer = require('redis-server');
+
+You may use a Redis configuration file instead of configuration object
+properties that are flags (i.e. `port` and `slaveof`). If `conf` is
+provided, no flags will be passed to the binary.
+
+```JavaScript
+
 const server = new RedisServer({
   conf: '/path/to/redis.conf'
 });
+
 ```
 
 ### Methods
 
-#### RedisServer#open(callback)
+For methods that accept `callback`, `callback` will receive an `Error`
+as the first argument if a problem is detected; `null`, if not.
 
-Attempt to open a Redis server. If `callback` is provided, it receives an
-`Error` instance if a problem is detected and a `Boolean` is returned; `true`,
-iff a process is spawned.
+#### RedisServer#open()
 
-#### RedisServer#close(callback)
+Attempt to open a Redis server. Returns a `Promise`.
 
-Close a Redis server. If `callback` is provided, it receives an `Error` instance
-if a problem is detected and a `Boolean` is returned; `true`, iff a process is
-killed.
+##### Promise style `open()`
+
+``` JavaScript
+
+server.open().then(() => {
+  // You may now connect a client to the Redis server bound to `server.port`.
+});
+
+```
+
+##### Callback style `open()`
+
+``` JavaScript
+
+server.open((err) => {
+  if (err === null) {
+    // You may now connect a client to the Redis server bound to `server.port`.
+  }
+});
+
+```
+
+#### RedisServer#close()
+
+Close the associated Redis server. Returns a `Promise`. NOTE: Disconnect
+clients prior to calling this method to avoid receiving connection
+errors from clients.
+
+##### Promise style `close()`
+
+``` JavaScript
+
+server.close().then(() => {
+  // The associated Redis server is now closed.
+});
+
+```
+
+##### Callback style `close()`
+
+``` JavaScript
+
+server.close((err) => {
+  // The associated Redis server is now closed.
+});
+
+```
 
 ### Properties
 
@@ -101,8 +152,3 @@ Emitted when a Redis server becomes ready to service requests.
 #### close
 
 Emitted when a Redis server closes.
-
-## TODO
-
-- Add Promises
-- Support "--slaveof" flag
