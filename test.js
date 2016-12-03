@@ -1,18 +1,19 @@
 'use strict';
 
 const childprocess = require('child_process');
+const fs = require('fs');
 const chai = require('chai');
 const mocha = require('mocha');
 const RedisServer = require('./RedisServer');
 const expect = chai.expect;
+const after = mocha.after;
 const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
 describe('RedisServer', () => {
-  let port = Math.floor(Math.random() * 10000) + 9000;
-  let server1, server2, server3, server4, server5, server6;
-  let bin = null;
+  const generateRandomPort = () =>
+    Math.floor(Math.random() * 10000) + 9000;
 
   const expectIdle = (server) => {
     expect(server.isOpening).to.equal(false);
@@ -27,49 +28,47 @@ describe('RedisServer', () => {
     expectIdle(server);
   };
 
-  const expectRunning = (server, port) => {
+  const expectRunning = (server) => {
     expect(server.isOpening).to.equal(false);
     expect(server.isRunning).to.equal(true);
     expect(server.isClosing).to.equal(false);
     expect(server.process).to.not.equal(null);
-
-    if (port) {
-      expect(server.port).to.equal(port);
-    }
-
+    expect(server.port).to.be.a('number');
     expect(server.pid).to.be.a('number');
   };
 
-  const expectOpening = (server, done) => {
-    let promise = null;
+  const expectToOpen = (server, done) => {
+    const oldPromise = server.openPromise;
+    const newPromise = server.open(done);
 
-    if (done) {
-      expect(server.open(done)).to.equal(true);
-    }
-    else {
-      promise = server.open();
-    }
-
+    expect(newPromise).to.be.a('promise');
+    expect(newPromise).to.not.equal(oldPromise);
     expect(server.isOpening).to.equal(true);
 
-    return promise;
+    return newPromise;
   };
 
-  const expectClosing = (server, done) => {
-    let promise = null;
+  const expectToClose = (server, done) => {
+    const oldPromise = server.openPromise;
+    const newPromise = server.close(done);
 
-    if (done) {
-      expect(server.close(done)).to.equal(true);
-    }
-    else {
-      promise = server.close();
-    }
-
+    expect(newPromise).to.be.a('promise');
+    expect(newPromise).to.not.equal(oldPromise);
     expect(server.isClosing).to.equal(true);
 
-    return promise;
+    return newPromise;
   };
 
+  let bin = null;
+  const conf = `./${new Date().toISOString()}.conf`;
+  const port = generateRandomPort();
+  const slaveof = `::1 ${port}`;
+
+  before((done) => {
+    childprocess.exec('pkill redis-server', () => {
+      done();
+    });
+  });
   before((done) => {
     childprocess.exec('which redis-server', (err, stdout) => {
       bin = stdout.trim();
@@ -77,142 +76,305 @@ describe('RedisServer', () => {
       done(err);
     });
   });
-  describe('#open()', () => {
-    it('should start a server (server1)', (done) => {
-      server1 = new RedisServer({ port });
+  before((done) => {
+    fs.writeFile(conf, `port ${port}\nbind ::1 127.0.0.1`, done);
+  });
+  after((done) => {
+    fs.unlink(conf, done);
+  });
+  describe('.parseConfig()', () => {
+    it('should parse bin, port, and slaveof', () => {
+      const expectedObject = { bin, port, slaveof };
+      const expectedKeys = Object.keys(expectedObject).sort();
 
-      expectEmpty(server1);
-      expectOpening(server1, done);
+      expectedObject.foo = 'bar';
+
+      const actualObject = RedisServer.parseConfig(expectedObject);
+
+      for (let key of expectedKeys) {
+        expect(actualObject).to.have.property(key).equal(expectedObject[key]);
+      }
+
+      expect(Object.keys(actualObject).sort()).to.eql(expectedKeys);
     });
-    it('should have started a server (server1)', () => {
-      expectRunning(server1, port);
+    it('should parse conf', () => {
+      const expectedObject = { bin, conf, port, slaveof };
+      const actualObject = RedisServer.parseConfig(expectedObject);
+
+      expect(actualObject).to.have.property('conf').equal(expectedObject.conf);
+      expect(Object.keys(actualObject)).to.have.length(1);
     });
-    it('should fail to start a server more than once', (done) => {
-      expect(server1.open(done)).to.equal(false);
-      expectRunning(server1, port);
+    it('should work without arguments', () => {
+      expect(RedisServer.parseConfig()).to.be.an('object');
+      expect(RedisServer.parseConfig(null)).to.be.an('object');
+    });
+  });
+  describe('.parseFlags()', () => {
+    it('should return an empty array when given an empty objecy', () => {
+      expect(RedisServer.parseFlags({})).to.have.length(0);
+    });
+    it('should return port, and slaveof', () => {
+      const config = { bin, port, slaveof };
+      const actualFlags = RedisServer.parseFlags(config);
+      const expectedFlags = [
+        '--port',
+        config.port,
+        '--slaveof',
+        config.slaveof
+      ];
+
+      expect(actualFlags).to.eql(expectedFlags);
+    });
+    it('should return conf', () => {
+      const config = { bin, conf, port, slaveof };
+
+      expect(RedisServer.parseFlags(config)).to.eql([config.conf]);
+    });
+  });
+  describe('#constructor()', () => {
+    it('constructs a new instance', () => {
+      const server = new RedisServer();
+
+      expectEmpty(server);
+    });
+    it('throws when invoked without the `new` keyword', () => {
+      expect(RedisServer).to.throw();
+    });
+    it('accepts a port as a string', () => {
+      const server = new RedisServer('1234');
+
+      expectEmpty(server);
+      expect(server.config.port).to.equal('1234');
+    });
+    it('accepts a port as a number', () => {
+      const server = new RedisServer(1234);
+
+      expectEmpty(server);
+      expect(server.config.port).to.equal(1234);
+    });
+    it('accepts a configuration object', () => {
+      const config = { bin, port, slaveof };
+      const server = new RedisServer(config);
+
+      expectEmpty(server);
+
+      for (let key of Object.keys(config)) {
+        expect(server.config).to.have.property(key).equal(config[key]);
+      }
+    });
+  });
+  describe('#open()', () => {
+    it('should start a server and execute a callback', (done) => {
+      const server = new RedisServer(generateRandomPort());
+
+      expectToOpen(server, (err) => {
+        expect(err).to.equal(null);
+        expectRunning(server);
+        server.close(done);
+      });
+    });
+    it('should start a server and resolve a promise', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return expectToOpen(server).then(() => {
+        expectRunning(server);
+
+        return server.close();
+      });
+    });
+    it('should not start more than one server', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return expectToOpen(server).then(() => {
+        const oldPromise = server.openPromise;
+        const newPromise = server.open();
+
+        expect(oldPromise).to.equal(newPromise);
+        expectRunning(server);
+
+        return server.close();
+      });
     });
     it('should fail to start a server with a bad port', (done) => {
-      server2 = new RedisServer({ port: 'fubar' });
+      const server = new RedisServer({ port: 'fubar' });
 
-      expectEmpty(server2);
-      server2.open((err) => {
+      server.open((err) => {
         expect(err).to.be.an('error');
-        expectIdle(server2);
+        expectIdle(server);
         done();
       });
-      expect(server2.isOpening).to.equal(true);
+      expect(server.isOpening).to.equal(true);
     });
     it('should fail to start a server with a privileged port', (done) => {
-      server2 = new RedisServer({ port: 1 });
+      const server = new RedisServer({ port: 1 });
 
-      expectEmpty(server2);
-      server2.open((err) => {
+      server.open((err) => {
         expect(err).to.be.an('error');
-        expectIdle(server2);
+        expectIdle(server);
         done();
       });
-      expect(server2.isOpening).to.equal(true);
+      expect(server.isOpening).to.equal(true);
     });
-    it('should fail to start a server on the same port as another server', (done) => {
-      server2 = new RedisServer({ port: server1.port });
+    it('should fail to start a server on an in-use port', (done) => {
+      const port = generateRandomPort();
+      const server1 = new RedisServer(port);
+      const server2 = new RedisServer(port);
 
-      expectEmpty(server2);
-      server2.open((err) => {
-        expect(err).to.be.an('error');
-        expectIdle(server2);
-        done();
+      server1.open(() => {
+        server2.open((err) => {
+          expect(err).to.be.an('error');
+          expectIdle(server2);
+          server1.close(done);
+        });
+        expect(server2.isOpening).to.equal(true);
       });
-      expect(server2.isOpening).to.equal(true);
     });
-    it('should start a server while another is running (server2)', (done) => {
-      server2 = new RedisServer({ port: ++port });
+    it('should start a server with a given port', () => {
+      const port = generateRandomPort();
+      const server = new RedisServer(port);
 
-      expectEmpty(server2);
-      expectOpening(server2, done);
+      return expectToOpen(server).then(() => {
+        expect(server.port).to.equal(port);
+
+        return server.close();
+      });
     });
-    it('should have started a server (server2)', () => {
-      expectRunning(server2, port);
+    it('should start a server with a given Redis conf', () => {
+      const server = new RedisServer({ conf });
+
+      return expectToOpen(server).then(() => {
+        expect(server.port).to.equal(port);
+
+        return server.close();
+      });
     });
-    it('should start a server with no config provided (server3)', (done) => {
-      server3 = new RedisServer();
+    it('should start a server with a given Redis binary', () => {
+      const server = new RedisServer({ bin, port });
 
-      expectEmpty(server3);
-      expectOpening(server3, done);
+      return expectToOpen(server).then(() => server.close());
     });
-    it('should have started a server (server3)', () => {
-      expectRunning(server3, 6379);
+    it('should start a server after #close() finishes', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return Promise
+      .all([
+        server.open(),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.close().then(resolve).catch(reject);
+          }, 10);
+        }),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.open().then(resolve).catch(reject);
+          }, 15);
+        }),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.close().then(resolve).catch(reject);
+          }, 20);
+        }),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.open().then(resolve).catch(reject);
+          }, 25);
+        })
+      ])
+      .then(() => {
+        expectRunning(server);
+
+        return server.close();
+      });
     });
-    it('should start a server with `bin` provided (server4)', (done) => {
-      server4 = new RedisServer({ bin, port: ++port });
+    it('should start a server while others run on different ports', () => {
+      const server1 = new RedisServer(generateRandomPort());
+      const server2 = new RedisServer(generateRandomPort());
+      const server3 = new RedisServer(generateRandomPort());
 
-      expectEmpty(server4);
-      expect(server4.config.bin).to.equal(bin);
-      expectOpening(server4, done);
-    });
-    it('should have started a server (server4)', () => {
-      expectRunning(server4, port);
-    });
-    it('should start a server with `conf` provided (server5)', (done) => {
-      server5 = new RedisServer({ conf: 'test.conf' });
+      return Promise
+      .all([
+        server1.open(),
+        server2.open(),
+        server3.open(),
+      ])
+      .then(() => {
+        expectRunning(server1);
+        expectRunning(server2);
+        expectRunning(server3);
 
-      expectEmpty(server5);
-      expectOpening(server5, done);
-    });
-    it('should start a server and return a promise (server6)', () => {
-      server6 = new RedisServer({ port: ++port });
-
-      expectEmpty(server6);
-
-      const promise = expectOpening(server6);
-
-      expect(promise).to.be.a('promise');
-
-      return promise;
+        return Promise.all([
+          server1.close(),
+          server2.close(),
+          server3.close()
+        ]);
+      });
     });
   });
   describe('#close()', () => {
-    it('should stop a server (server1)', (done) => {
-      expectRunning(server1);
-      expectClosing(server1, done);
-    });
-    it('should have stopped a server (server1)', () => {
-      expectEmpty(server1);
-    });
-    it('should stop a server (server2)', (done) => {
-      expectRunning(server2);
-      expectClosing(server2, done);
-    });
-    it('should have stopped a server (server2)', () => {
-      expectEmpty(server2);
-    });
-    it('should stop a server (server3)', (done) => {
-      expectRunning(server3);
-      expectClosing(server3, done);
-    });
-    it('should have stopped a server (server3)', () => {
-      expectEmpty(server3);
-    });
-    it('should stop a server (server4)', (done) => {
-      expectRunning(server4);
-      expectClosing(server4, done);
-    });
-    it('should have stopped a server (server4)', () => {
-      expectEmpty(server4);
-    });
-    it('should stop a server (server5)', (done) => {
-      expectRunning(server5);
-      expectClosing(server5, done);
-    });
-    it('should have stopped a server (server5)', () => {
-      expectEmpty(server5);
-    });
-    it('should stop a server (server6)', () => {
-      expectRunning(server6);
+    it('should close a server and execute a callback', (done) => {
+      const server = new RedisServer(generateRandomPort());
 
-      return expectClosing(server6);
+      server.open((err) => {
+        expect(err).to.equal(null);
+        expectRunning(server);
+        expectToClose(server, (err) => {
+          expect(err).to.equal(null);
+          expectIdle(server);
+          done();
+        });
+      });
     });
-    it('should have stopped a server (server6)', () => {
-      expectEmpty(server6);
+    it('should close a server and resolve a promise', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return server.open()
+      .then(() => expectToClose(server))
+      .then(() => expectIdle(server));
+    });
+    it('should not stop a server more than once', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return server.open().then(() => {
+        const oldPromise = server.close();
+        const newPromise = server.close();
+
+        expect(oldPromise).to.equal(newPromise);
+
+        return newPromise;
+      });
+    });
+    it('should not stop a server that is already stopped', () => {
+      const server = new RedisServer(generateRandomPort());
+      const oldPromise = server.closePromise;
+      const newPromise = server.close();
+
+      expect(oldPromise).to.equal(newPromise);
+    });
+    it('should stop a server after #open() finishes', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return Promise
+      .all([
+        server.open(),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.close().then(resolve).catch(reject);
+          }, 10);
+        }),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.open().then(resolve).catch(reject);
+          }, 15);
+        }),
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            server.close().then(resolve).catch(reject);
+          }, 20);
+        })
+      ])
+      .then(() => {
+        expectIdle(server);
+      });
     });
   });
 });
