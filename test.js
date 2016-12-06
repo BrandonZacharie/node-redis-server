@@ -117,10 +117,8 @@ describe('RedisServer', () => {
       const config = { bin, port, slaveof };
       const actualFlags = RedisServer.parseFlags(config);
       const expectedFlags = [
-        '--port',
-        config.port,
-        '--slaveof',
-        config.slaveof
+        `--port ${config.port}`,
+        `--slaveof ${config.slaveof}`
       ];
 
       expect(actualFlags).to.eql(expectedFlags);
@@ -227,6 +225,25 @@ describe('RedisServer', () => {
           server1.close(done);
         });
         expect(server2.isOpening).to.equal(true);
+      });
+    });
+    it('should start a server with a given slaveof address', () => {
+      const server1 = new RedisServer(port);
+      const server2 = new RedisServer({ port: generateRandomPort(), slaveof });
+      let isSlaveOf = false;
+
+      server2.on('stdout', (value) => {
+        if (value.indexOf('MASTER <-> SLAVE sync started') !== -1) {
+          isSlaveOf = true;
+        }
+      });
+
+      return server1.open()
+      .then(() => expectToOpen(server2))
+      .then(() => new Promise((resolve) => setTimeout(resolve, 10)))
+      .then(() => Promise.all([server2.close(), server1.close()]))
+      .then(() => {
+        expect(isSlaveOf).to.equal(true);
       });
     });
     it('should start a server with a given port', () => {
