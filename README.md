@@ -1,8 +1,8 @@
 # redis-server
 
-[![NPM version](https://badge.fury.io/js/redis-server.svg)](http://badge.fury.io/js/redis-server)
-[![Build Status](https://travis-ci.org/BrandonZacharie/node-redis-server.svg?branch=master)](https://travis-ci.org/BrandonZacharie/node-redis-server)
-[![Coverage Status](https://coveralls.io/repos/github/BrandonZacharie/node-redis-server/badge.svg?branch=master)](https://coveralls.io/github/BrandonZacharie/node-redis-server?branch=master)
+[![NPM version](https://img.shields.io/npm/v/redis-server.svg)](https://www.npmjs.com/package/redis-server)
+[![Build Status](https://img.shields.io/travis/BrandonZacharie/node-redis-server/master.svg)](https://travis-ci.org/BrandonZacharie/node-redis-server)
+[![Coverage Status](https://img.shields.io/coveralls/BrandonZacharie/node-redis-server/master.svg)](https://coveralls.io/github/BrandonZacharie/node-redis-server?branch=master)
 
 Start and stop a local Redis server in Node.js like a boss.
 
