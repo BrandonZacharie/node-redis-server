@@ -9,7 +9,11 @@ Start and stop a local Redis server in Node.js like a boss.
 
 ## Installation
 
-```npm install redis-server```
+```Bash
+
+npm install redis-server
+
+```
 
 ## Usage
 
@@ -129,7 +133,8 @@ server.close((err) => {
 #### RedisServer#isOpening
 
 Determine if the instance is starting a Redis server; `true` while a
-process is spawning until a Redis server starts or errs.
+process is spawning, and/or about to be spawned, until the contained Redis
+server either starts or errs.
 
 #### RedisServer#isRunning
 
@@ -139,7 +144,8 @@ has spawned and the contained Redis server is ready to service requests.
 #### RedisServer#isClosing
 
 Determine if the instance is closing a Redis server; `true` while a
-process is being killed until the contained Redis server closes.
+process is being, or about to be, killed until the contained Redis server either
+closes or errs.
 
 ### Events
 

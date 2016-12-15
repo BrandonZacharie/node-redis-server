@@ -1,15 +1,16 @@
 'use strict';
 
 /**
- * Represents configuration options for `RedisServer`.
- * @typedef {Object} Config
+ * Configuration options for a {@link RedisServer}.
+ * @typedef {Object} RedisServer~Config
+ * @property {String} [bin=redis-server]
+ * @property {String} [conf]
  * @property {(Number|String)} [port=6379]
- * @property {String} [bin='redis-server']
- * @property {String} [conf=null]
+ * @property {(String)} [slaveof]
  */
 
 /**
- * A function invoked when an operation (i.e. `open()`) completes.
+ * Invoked when an operation (i.e. {@link RedisServer#open}) completes.
  * @callback RedisServer~callback
  * @argument {Error} err
  */
@@ -20,17 +21,22 @@ const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|er
 const strRE = / /ig;
 
 /**
- * Start and stop a Redis server like a boss.
+ * Start and stop a local Redis server like a boss.
  * @class
  */
-module.exports = exports = class RedisServer extends events.EventEmitter {
+class RedisServer extends events.EventEmitter {
+    if (source.bin != null) {
+      target.bin = source.bin;
+    }
+
 
   /**
-   * Populate a given `Config` with values from a given `Config`.
+   * Populate a given {@link RedisServer~Config} with values from a
+   * given {@link RedisServer~Config}.
    * @protected
-   * @argument {Config} source
-   * @argument {Config} target
-   * @return {Config}
+   * @argument {RedisServer~Config} source
+   * @argument {RedisServer~Config} target
+   * @return {RedisServer~Config}
    */
   static parseConfig(source, target) {
     if (target == null) {
@@ -55,18 +61,14 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
       target.port = source.port;
     }
 
-    if (source.bin != null) {
-      target.bin = source.bin;
-    }
-
     return target;
   }
 
   /**
-   * Parse Process flags for Redis from a given `Config`.
+   * Parse process flags for Redis from a given {@link RedisServer~Config}.
    * @protected
-   * @argument {Config} config
-   * @return {String[]}
+   * @argument {RedisServer~Config} config
+   * @return {Array.<String>}
    */
   static parseFlags(config) {
     if (config.conf != null) {
@@ -87,7 +89,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Start a given `RedisServer`.
+   * Start a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
    * @argument {Boolean} isCallback
@@ -97,7 +99,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
     if (server.isClosing) {
       server.openPromise = new Promise((resolve, reject) => {
         const open = () =>
-          exports.open(server, true).then(resolve).catch(reject);
+          RedisServer.open(server, true).then(resolve).catch(reject);
 
         server.isClosing = false;
         server.isOpening = true;
@@ -119,7 +121,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
 
       server.process = childprocess.spawn(
         server.config.bin,
-        exports.parseFlags(server.config)
+        RedisServer.parseFlags(server.config)
       );
 
       const matchHandler = (value) => {
@@ -215,7 +217,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Stop a given `RedisServer`.
+   * Stop a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
    * @argument {Boolean} isCallback
@@ -252,8 +254,9 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Construct a new `RedisServer`.
-   * @argument {(Number|String|Config)} [configOrPort]
+   * Construct a new {@link RedisServer}.
+   * @argument {(Number|String|RedisServer~Config)} [configOrPort]
+   * A number or string that is a port or an object for configuration.
    */
   constructor(configOrPort) {
     super();
@@ -261,7 +264,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
     /**
      * Configuration options.
      * @protected
-     * @type {Config}
+     * @type {RedisServer~Config}
      */
     this.config = {
       bin: 'redis-server',
@@ -271,7 +274,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
     };
 
     /**
-     * The current process ID.
+     * The current {@link RedisServer#process} identifier.
      * @protected
      * @type {Number}
      */
@@ -287,46 +290,52 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
     /**
      * The current process.
      * @protected
-     * @type {Object}
+     * @type {ChildProcess}
      */
     this.process = null;
 
     /**
-     * The last `Promise` returned by `open()`.
+     * The last {@link Promise} returned by {@link RedisServer#open}.
      * @protected
      * @type {Promise}
      */
     this.openPromise = Promise.resolve(null);
 
     /**
-     * The last `Promise` returned by `close()`.
+     * The last {@link Promise} returned by {@link RedisServer#close}.
      * @protected
      * @type {Promise}
      */
     this.closePromise = Promise.resolve(null);
 
     /**
-     * Determine if the instance is closing a Redis server; true while a process
-     * is being killed until the contained Redis server closes.
+     * Determine if the instance is closing a Redis server; {@linkcode true}
+     * while a process is being, or about to be, killed until the
+     * contained Redis server either closes or errs.
+     * @readonly
      * @type {Boolean}
      */
     this.isClosing = false;
 
     /**
-     * Determine if the instance is starting a Redis server; true while a
-     * process is spawning until a Redis server starts or errs.
+     * Determine if the instance is starting a Redis server; {@linkcode true}
+     * while a process is spawning, or about tobe spawned, until the
+     * contained Redis server either starts or errs.
+     * @readonly
      * @type {Boolean}
      */
     this.isRunning = false;
 
     /**
-     * Determine if the instance is running a Redis server; true once a process
-     * has spawned and the contained Redis server is ready to service requests.
+     * Determine if the instance is running a Redis server; {@linkcode true}
+     * once a process has spawned and the contained Redis server is ready
+     * to service requests.
+     * @readonly
      * @type {Boolean}
      */
     this.isOpening = false;
 
-    // Parse the given `Config`.
+    // Parse the given {RedisServer~Config}.
     if (typeof configOrPort === 'number' || typeof configOrPort === 'string') {
       this.config.port = configOrPort;
     }
@@ -341,7 +350,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
    * @return {Promise}
    */
   open(callback) {
-    const promise = exports.open(this, false);
+    const promise = RedisServer.open(this, false);
 
     if (typeof callback === 'function') {
       promise.then(callback).catch(callback);
@@ -356,7 +365,7 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
    * @return {Promise}
    */
   close(callback) {
-    const promise = exports.close(this, false);
+    const promise = RedisServer.close(this, false);
 
     if (typeof callback === 'function') {
       promise.then(callback).catch(callback);
@@ -364,4 +373,6 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
 
     return promise;
   }
-};
+}
+
+module.exports = exports = RedisServer;
