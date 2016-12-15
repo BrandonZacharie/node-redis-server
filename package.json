@@ -1,31 +1,31 @@
 {
   "name": "redis-server",
   "description": "Start and stop a Redis server.",
+  "keywords": ["Redis", "server", "manager"],
   "version": "0.4.0",
   "license": "MIT",
+  "homepage": "https://github.com/BrandonZacharie/node-redis-server#readme",
+  "bugs": {
+    "url": "https://github.com/BrandonZacharie/node-redis-server/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrandonZacharie/node-redis-server.git"
+  },
   "author": {
     "name": "Brandon Zacharie",
     "email": "brandon.zacharie@gmail.com"
   },
+  "main": "./RedisServer.js",
   "engines": {
     "node": ">=4.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/BrandonZacharie/node-redis-server.git"
-  },
-  "keywords": [
-    "redis",
-    "server",
-    "manager"
-  ],
   "scripts": {
     "test": "./node_modules/.bin/mocha --bail test",
     "test+coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly -- --reporter dot",
     "lint": "./node_modules/.bin/jshint RedisServer.js",
     "ci": "npm run lint && npm run test+coverage && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
   },
-  "main": "./RedisServer.js",
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^2.11.15",
