@@ -97,12 +97,13 @@ describe('RedisServer', () => {
 
       expect(Object.keys(actualObject).sort()).to.eql(expectedKeys);
     });
-    it('should parse conf', () => {
+    it('should parse bin and conf only', () => {
       const expectedObject = { bin, conf, port, slaveof };
       const actualObject = RedisServer.parseConfig(expectedObject);
 
+      expect(actualObject).to.have.property('bin').equal(expectedObject.bin);
       expect(actualObject).to.have.property('conf').equal(expectedObject.conf);
-      expect(Object.keys(actualObject)).to.have.length(1);
+      expect(Object.keys(actualObject)).to.have.length(2);
     });
     it('should work without arguments', () => {
       expect(RedisServer.parseConfig()).to.be.an('object');
@@ -110,7 +111,7 @@ describe('RedisServer', () => {
     });
   });
   describe('.parseFlags()', () => {
-    it('should return an empty array when given an empty objecy', () => {
+    it('should return an empty array when given an empty object', () => {
       expect(RedisServer.parseFlags({})).to.have.length(0);
     });
     it('should return port, and slaveof', () => {

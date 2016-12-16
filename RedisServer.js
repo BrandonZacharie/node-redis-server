@@ -25,10 +25,6 @@ const strRE = / /ig;
  * @class
  */
 class RedisServer extends events.EventEmitter {
-    if (source.bin != null) {
-      target.bin = source.bin;
-    }
-
 
   /**
    * Populate a given {@link RedisServer~Config} with values from a
@@ -45,6 +41,10 @@ class RedisServer extends events.EventEmitter {
 
     if (source == null) {
       return target;
+    }
+
+    if (source.bin != null) {
+      target.bin = source.bin;
     }
 
     if (source.conf != null) {
