@@ -17,8 +17,8 @@
 
 const childprocess = require('child_process');
 const events = require('events');
-const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig;
-const strRE = / /ig;
+const keyRE = /now\sready|already\sin\suse|not\slisten|error|denied/ig;
+const whiteSpaceRE = / /ig;
 
 /**
  * Start and stop a local Redis server like a boss.
@@ -125,12 +125,9 @@ class RedisServer extends events.EventEmitter {
       );
 
       const matchHandler = (value) => {
-        const t = value.split(':');
-        const k = t[0].replace(strRE, '').toLowerCase();
-        const v = t[1];
         let err = null;
 
-        switch (k) {
+        switch (value.replace(whiteSpaceRE, '').toLowerCase()) {
           case 'alreadyinuse':
             err = new Error('Address already in use');
             err.code = -1;
@@ -150,19 +147,12 @@ class RedisServer extends events.EventEmitter {
 
             break;
 
-          case 'pid':
-          case 'port':
-            server[k] = Number(v);
+          case 'nowready':
+            server.isRunning = true;
 
-            if (!(server.port === null || server.pid === null)) {
-              server.isRunning = true;
+            server.emit('open');
 
-              server.emit('open');
-
-              break;
-            }
-
-            return false;
+            break;
 
           default:
             return false;
@@ -199,8 +189,6 @@ class RedisServer extends events.EventEmitter {
       server.process.stdout.on('data', dataHandler);
       server.process.on('close', () => {
         server.process = null;
-        server.port = null;
-        server.pid = null;
         server.isRunning = false;
         server.isClosing = false;
 
@@ -272,20 +260,6 @@ class RedisServer extends events.EventEmitter {
       port: 6379,
       slaveof: null,
     };
-
-    /**
-     * The current {@link RedisServer#process} identifier.
-     * @protected
-     * @type {Number}
-     */
-    this.pid = null;
-
-    /**
-     * The port the Redis server is currently bound to.
-     * @protected
-     * @type {Number}
-     */
-    this.port = null;
 
     /**
      * The current process.

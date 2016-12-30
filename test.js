@@ -22,8 +22,6 @@ describe('RedisServer', () => {
   };
 
   const expectEmpty = (server) => {
-    expect(server.pid).to.equal(null);
-    expect(server.port).to.equal(null);
     expect(server.process).to.equal(null);
     expectIdle(server);
   };
@@ -33,8 +31,6 @@ describe('RedisServer', () => {
     expect(server.isRunning).to.equal(true);
     expect(server.isClosing).to.equal(false);
     expect(server.process).to.not.equal(null);
-    expect(server.port).to.be.a('number');
-    expect(server.pid).to.be.a('number');
   };
 
   const expectToOpen = (server, done) => {
@@ -57,6 +53,21 @@ describe('RedisServer', () => {
     expect(server.isClosing).to.equal(true);
 
     return newPromise;
+  };
+
+  const parsePort = (server, callback) => {
+    const portRegExp = /port:\s+\d+/ig;
+    const listener = (value) => {
+      const matches = value.match(portRegExp);
+
+      if (matches !== null) {
+        server.removeListener('stdout', listener);
+
+        return callback(Number(matches[0].split(':').pop()));
+      }
+    };
+
+    server.on('stdout', listener);
   };
 
   let bin = null;
@@ -248,20 +259,26 @@ describe('RedisServer', () => {
       });
     });
     it('should start a server with a given port', () => {
-      const port = generateRandomPort();
-      const server = new RedisServer(port);
+      const expectedPort = generateRandomPort();
+      const server = new RedisServer(expectedPort);
+      let actualPort = null;
+
+      parsePort(server, (port) => actualPort = port);
 
       return expectToOpen(server).then(() => {
-        expect(server.port).to.equal(port);
+        expect(actualPort).to.equal(expectedPort);
 
         return server.close();
       });
     });
     it('should start a server with a given Redis conf', () => {
       const server = new RedisServer({ conf });
+      let actualPort = null;
+
+      parsePort(server, (port) => actualPort = port);
 
       return expectToOpen(server).then(() => {
-        expect(server.port).to.equal(port);
+        expect(actualPort).to.equal(port);
 
         return server.close();
       });
