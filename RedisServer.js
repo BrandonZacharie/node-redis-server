@@ -17,6 +17,7 @@
 
 const childprocess = require('child_process');
 const events = require('events');
+const PromiseQueue = require('promise-queue');
 const keyRE = /now\sready|already\sin\suse|not\slisten|error|denied/ig;
 const whiteSpaceRE = / /ig;
 
@@ -92,113 +93,106 @@ class RedisServer extends events.EventEmitter {
    * Start a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
-   * @argument {Boolean} isCallback
    * @return {Promise}
    */
-  static open(server, isCallback) {
-    if (server.isClosing) {
-      server.openPromise = new Promise((resolve, reject) => {
-        const open = () =>
-          RedisServer.open(server, true).then(resolve).catch(reject);
-
-        server.isClosing = false;
-        server.isOpening = true;
-
-        server.closePromise.then(open).catch(open);
-      });
-
+  static open(server) {
+    if (server.isOpening) {
       return server.openPromise;
     }
 
-    if (server.isOpening && !isCallback || server.isRunning) {
-      return server.openPromise;
-    }
-
-    server.openPromise = new Promise((resolve, reject) => {
-      server.isOpening = true;
-
-      server.emit('opening');
-
-      server.process = childprocess.spawn(
-        server.config.bin,
-        RedisServer.parseFlags(server.config)
-      );
-
-      const matchHandler = (value) => {
-        let err = null;
-
-        switch (value.replace(whiteSpaceRE, '').toLowerCase()) {
-          case 'alreadyinuse':
-            err = new Error('Address already in use');
-            err.code = -1;
-
-            break;
-
-          case 'denied':
-            err = new Error('Permission denied');
-            err.code = -2;
-
-            break;
-
-          case 'error':
-          case 'notlisten':
-            err = new Error('Invalid port number');
-            err.code = -3;
-
-            break;
-
-          case 'nowready':
-            server.isRunning = true;
-
-            server.emit('open');
-
-            break;
-
-          default:
-            return false;
-        }
-
+    server.isOpening = true;
+    server.isClosing = false;
+    server.openPromise = server.promiseQueue.add(() => {
+      if (server.isClosing || server.isRunning) {
         server.isOpening = false;
 
-        if (err === null) {
-          resolve(null);
-        }
-        else {
-          reject(err);
-        }
+        return Promise.resolve(null);
+      }
 
-        return true;
-      };
+      return new Promise((resolve, reject) => {
+        server.emit('opening');
 
-      const dataHandler = (value) => {
-        const matches = value.toString().match(keyRE);
+        server.process = childprocess.spawn(
+          server.config.bin,
+          RedisServer.parseFlags(server.config)
+        );
 
-        if (matches !== null) {
-          for (let match of matches) {
-            if (matchHandler(match)) {
-              return server.process.stdout.removeListener('data', dataHandler);
+        const matchHandler = (value) => {
+          let err = null;
+
+          switch (value.replace(whiteSpaceRE, '').toLowerCase()) {
+            case 'alreadyinuse':
+              err = new Error('Address already in use');
+              err.code = -1;
+
+              break;
+
+            case 'denied':
+              err = new Error('Permission denied');
+              err.code = -2;
+
+              break;
+
+            case 'error':
+            case 'notlisten':
+              err = new Error('Invalid port number');
+              err.code = -3;
+
+              break;
+
+            case 'nowready':
+              server.isRunning = true;
+
+              server.emit('open');
+
+              break;
+
+            default:
+              return false;
+          }
+
+          server.isOpening = false;
+
+          if (err === null) {
+            resolve(null);
+          }
+          else {
+            reject(err);
+          }
+
+          return true;
+        };
+
+        const dataHandler = (value) => {
+          const matches = value.toString().match(keyRE);
+
+          if (matches !== null) {
+            for (let match of matches) {
+              if (matchHandler(match)) {
+                return server.process.stdout.removeListener('data', dataHandler);
+              }
             }
           }
-        }
-      };
+        };
 
-      const exitHandler = () => {
-        server.close();
-      };
+        const exitHandler = () => {
+          server.close();
+        };
 
-      server.process.stdout.on('data', dataHandler);
-      server.process.on('close', () => {
-        server.process = null;
-        server.isRunning = false;
-        server.isClosing = false;
+        server.process.stdout.on('data', dataHandler);
+        server.process.on('close', () => {
+          server.process = null;
+          server.isRunning = false;
+          server.isClosing = false;
 
-        process.removeListener('exit', exitHandler);
-        server.emit('close');
+          process.removeListener('exit', exitHandler);
+          server.emit('close');
+        });
+        server.process.stdout.on('data', (data) => {
+          server.emit('stdout', data.toString());
+        });
+        process.on('exit', exitHandler);
       });
-      server.process.stdout.on('data', (data) => {
-        server.emit('stdout', data.toString());
-      });
-      process.on('exit', exitHandler);
     });
 
     return server.openPromise;
@@ -208,34 +202,27 @@ class RedisServer extends events.EventEmitter {
    * Stop a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
-   * @argument {Boolean} isCallback
    * @return {Promise}
    */
-  static close(server, isCallback) {
-    if (server.isOpening) {
-      server.closePromise = new Promise((resolve, reject) => {
-        const close = () =>
-          exports.close(server, true).then(resolve).catch(reject);
+  static close(server) {
+    if (server.isClosing) {
+      return server.closePromise;
+    }
 
-        server.isOpening = false;
-        server.isClosing = true;
+    server.isClosing = true;
+    server.isOpening = false;
+    server.closePromise = server.promiseQueue.add(() => {
+      if (server.isOpening || !server.isRunning) {
+        server.isClosing = false;
 
-        server.openPromise.then(close).catch(close);
+        return Promise.resolve(null);
+      }
+
+      return new Promise((resolve) => {
+        server.emit('closing');
+        server.process.once('close', () => resolve(null));
+        server.process.kill();
       });
-
-      return server.closePromise;
-    }
-
-    if (server.isClosing && !isCallback || !server.isRunning) {
-      return server.closePromise;
-    }
-
-    server.closePromise = new Promise((resolve) => {
-      server.isClosing = true;
-
-      server.emit('closing');
-      server.process.once('close', () => resolve(null));
-      server.process.kill();
     });
 
     return server.closePromise;
@@ -281,6 +268,13 @@ class RedisServer extends events.EventEmitter {
      * @type {Promise}
      */
     this.closePromise = Promise.resolve(null);
+
+    /**
+     * A serial queue of open and close promises.
+     * @protected
+     * @type {PromiseQueue}
+     */
+    this.promiseQueue = new PromiseQueue(1);
 
     /**
      * Determine if the instance is closing a Redis server; {@linkcode true}

@@ -26,6 +26,9 @@
     "lint": "./node_modules/.bin/jshint RedisServer.js",
     "ci": "npm run lint && npm run test+coverage && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
   },
+  "dependencies": {
+    "promise-queue": "^2.2.3"
+  },
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^2.11.15",
