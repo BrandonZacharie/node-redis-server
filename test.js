@@ -189,17 +189,29 @@ describe('RedisServer', () => {
     it('should start a server and execute a callback', (done) => {
       const server = new RedisServer(generateRandomPort());
 
-      expectToOpen(server, (err) => {
-        expect(err).to.equal(null);
+      expectToOpen(server, (err, res) => {
+        expect(err, 'err').to.equal(null);
+        expect(res, 'res').to.equal(null);
         expectRunning(server);
         server.close(done);
+      })
+      .catch(done);
+    });
+    it('should pass an error and null result to a callback on failure', (done) => {
+      const server = new RedisServer('badport');
+
+      server.open((err, res) => {
+        expect(err).to.be.an('error');
+        expect(res).to.equal(null);
+        done();
       });
     });
     it('should start a server and resolve a promise', () => {
       const server = new RedisServer(generateRandomPort());
 
-      return expectToOpen(server).then(() => {
+      return expectToOpen(server).then((res) => {
         expectRunning(server);
+        expect(res).to.equal(null);
 
         return server.close();
       });
