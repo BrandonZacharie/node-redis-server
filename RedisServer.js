@@ -320,13 +320,11 @@ class RedisServer extends events.EventEmitter {
   open(callback) {
     const promise = RedisServer.open(this, false);
 
-    if (typeof callback === 'function') {
-      promise
+    return typeof callback === 'function'
+    ? promise
       .then((v) => callback(null, v))
-      .catch((e) => callback(e, null));
-    }
-
-    return promise;
+      .catch((e) => callback(e, null))
+    : promise;
   }
 
   /**
@@ -337,13 +335,11 @@ class RedisServer extends events.EventEmitter {
   close(callback) {
     const promise = RedisServer.close(this, false);
 
-    if (typeof callback === 'function') {
-      promise
+    return typeof callback === 'function'
+    ? promise
       .then((v) => callback(null, v))
-      .catch((e) => callback(e, null));
-    }
-
-    return promise;
+      .catch((e) => callback(e, null))
+    : promise;
   }
 }
 
