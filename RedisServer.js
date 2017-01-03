@@ -117,10 +117,18 @@ class RedisServer extends events.EventEmitter {
           RedisServer.parseFlags(server.config)
         );
 
-        const matchHandler = (value) => {
+        /**
+         * Parse a given {@linkcode match} and return a {@linkcode Boolean}
+         * indicating if more are expected. Returns {@linkcode true} when a
+         * given {@linkcode match} results in the current {@link Promise}
+         * being resolved or rejected.
+         * @argument {String} match
+         * @return {Boolean}
+         */
+        const matchHandler = (match) => {
           let err = null;
 
-          switch (value.replace(whiteSpaceRE, '').toLowerCase()) {
+          switch (match.replace(whiteSpaceRE, '').toLowerCase()) {
             case 'alreadyinuse':
               err = new Error('Address already in use');
               err.code = -1;
@@ -163,18 +171,31 @@ class RedisServer extends events.EventEmitter {
           return true;
         };
 
-        const dataHandler = (value) => {
-          const matches = value.toString().match(keyRE);
+        /**
+         * A handler to parse data from the server's stdout and forward
+         * {@link keyRE} matches to {@link matchHandler} until resolves
+         * or rejects the current {@link Promise}.
+         * @argument {Buffer} data
+         * @return {undefined}
+         */
+        const dataHandler = (data) => {
+          const matches = data.toString().match(keyRE);
 
           if (matches !== null) {
             for (let match of matches) {
               if (matchHandler(match)) {
-                return server.process.stdout.removeListener('data', dataHandler);
+                server.process.stdout.removeListener('data', dataHandler);
+
+                return;
               }
             }
           }
         };
 
+        /**
+         * A handler to close the server when the current process exits.
+         * @return {undefined}
+         */
         const exitHandler = () => {
           server.close();
         };
@@ -245,7 +266,7 @@ class RedisServer extends events.EventEmitter {
       bin: 'redis-server',
       conf: null,
       port: 6379,
-      slaveof: null,
+      slaveof: null
     };
 
     /**

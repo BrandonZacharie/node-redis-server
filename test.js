@@ -11,9 +11,19 @@ const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
+/**
+ * Get a random port number between 9000 and 10000.
+ * @return {Number}
+ */
 const generateRandomPort = () =>
   Math.floor(Math.random() * 10000) + 9000;
 
+/**
+ * Get a {@link Promise} that is resolved or rejected when the given
+ * {@linkcode delegate} invokes the Node.js style callback provided.
+ * @argument {Function} delegate
+ * @return {Promise}
+ */
 const promisify = (delegate) =>
   new Promise((resolve, reject) => {
     delegate((err, value) => {
@@ -26,17 +36,22 @@ const promisify = (delegate) =>
     });
   });
 
+/**
+ * Expect a given {@linkcode server} to not be opening closing or running.
+ * @argument {RedisServer} server
+ * @return {undefined}
+ */
 const expectIdle = (server) => {
   expect(server.isOpening).to.equal(false);
   expect(server.isRunning).to.equal(false);
   expect(server.isClosing).to.equal(false);
 };
 
-const expectEmpty = (server) => {
-  expect(server.process).to.equal(null);
-  expectIdle(server);
-};
-
+/**
+ * Expect a given {@linkcode server} to be running.
+ * @argument {RedisServer} server
+ * @return {undefined}
+ */
 const expectRunning = (server) => {
   expect(server.isOpening).to.equal(false);
   expect(server.isRunning).to.equal(true);
@@ -44,6 +59,13 @@ const expectRunning = (server) => {
   expect(server.process).to.not.equal(null);
 };
 
+/**
+ * Attempt to start a given {@linkcode server} and expect it to be opening.
+ * Passes {linkcode done} to {@link RedisServer#open}.
+ * @argument {RedisServer} server
+ * @argument {RedisServer~callback} [done]
+ * @return {undefined}
+ */
 const expectToOpen = (server, done) => {
   const oldPromise = server.openPromise;
   const newPromise = server.open(done);
@@ -55,6 +77,13 @@ const expectToOpen = (server, done) => {
   return newPromise;
 };
 
+/**
+ * Attempt to stop a given {@linkcode server} and expect it be closing.
+ * Passes {linkcode done} to {@link RedisServer#close}.
+ * @argument {RedisServer} server
+ * @argument {RedisServer~callback} [done]
+ * @return {undefined}
+ */
 const expectToClose = (server, done) => {
   const oldPromise = server.openPromise;
   const newPromise = server.close(done);
@@ -66,8 +95,21 @@ const expectToClose = (server, done) => {
   return newPromise;
 };
 
+/**
+ * Parse the port number from the stdout of a given {@linkcode server}.
+ * @argument {RedisServer} server
+ * @argument {Function} callback
+ * @return {undefined}
+ */
 const parsePort = (server, callback) => {
   const portRegExp = /port:\s+\d+/ig;
+
+  /**
+   * A listener for stdout of the current server. Invokes {@linkcode callback}
+   * with the first parsed {@linkcode portRegExp} match.
+   * @argument {String} value
+   * @return {undefined}
+   */
   const listener = (value) => {
     const matches = value.match(portRegExp);
 
@@ -157,7 +199,8 @@ describe('RedisServer', () => {
     it('constructs a new instance', () => {
       const server = new RedisServer();
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
     });
     it('throws when invoked without the `new` keyword', () => {
       expect(RedisServer).to.throw();
@@ -165,20 +208,23 @@ describe('RedisServer', () => {
     it('accepts a port as a string', () => {
       const server = new RedisServer('1234');
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
       expect(server.config.port).to.equal('1234');
     });
     it('accepts a port as a number', () => {
       const server = new RedisServer(1234);
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
       expect(server.config.port).to.equal(1234);
     });
     it('accepts a configuration object', () => {
       const config = { bin, port, slaveof };
       const server = new RedisServer(config);
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
 
       for (let key of Object.keys(config)) {
         expect(server.config).to.have.property(key).equal(config[key]);
@@ -336,7 +382,7 @@ describe('RedisServer', () => {
       .all([
         server1.open(),
         server2.open(),
-        server3.open(),
+        server3.open()
       ])
       .then(() => {
         expectRunning(server1);

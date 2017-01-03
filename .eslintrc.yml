@@ -1,0 +1,86 @@
+env:
+  es6: true
+  node: true
+extends: 'eslint:recommended'
+parserOptions:
+  ecmaVersion: 6
+rules:
+  indent:
+  - error
+  - 2
+  - SwitchCase: 1
+  linebreak-style:
+  - error
+  - unix
+  quotes:
+  - error
+  - single
+  semi:
+  - error
+  - always
+  eqeqeq:
+  - error
+  - smart
+  key-spacing:
+  - error
+  keyword-spacing:
+  - error
+  handle-callback-err:
+  - error
+  comma-dangle:
+  - error
+  yoda:
+  - error
+  no-trailing-spaces:
+  - error
+  no-case-declarations:
+  - error
+  no-new-wrappers:
+  - error
+  no-new:
+  - error
+  no-multi-spaces:
+  - error
+  no-lone-blocks:
+  - error
+  no-multiple-empty-lines:
+  - error
+  - max: 1
+    maxEOF: 0
+  semi-spacing:
+  - error
+  spaced-comment:
+  - error
+  - always
+  unicode-bom:
+  - error
+  - never
+  one-var:
+  - error
+  - never
+  newline-per-chained-call:
+  - error
+  - ignoreChainWithDepth: 2
+  newline-before-return:
+  - error
+  require-jsdoc:
+  - error
+  - require:
+      FunctionDeclaration: true
+      MethodDefinition: true
+      ClassDeclaration: true
+      ArrowFunctionExpression: true
+  valid-jsdoc:
+  - error
+  - prefer:
+      arg: argument
+      param: argument
+      returns: return
+    preferType:
+      object: Object
+      string: String
+      boolean: Boolean
+      bool: Boolean
+      number: Number
+    requireParamDescription: false
+    requireReturnDescription: false
