@@ -1,36 +1,39 @@
 'use strict';
 
 /**
- * Represents configuration options for `RedisServer`.
- * @typedef {Object} Config
+ * Configuration options for a {@link RedisServer}.
+ * @typedef {Object} RedisServer~Config
+ * @property {String} [bin=redis-server]
+ * @property {String} [conf]
  * @property {(Number|String)} [port=6379]
- * @property {String} [bin='redis-server']
- * @property {String} [conf=null]
+ * @property {(String)} [slaveof]
  */
 
 /**
- * A function invoked when an operation (i.e. `open()`) completes.
+ * Invoked when an operation (i.e. {@link RedisServer#open}) completes.
  * @callback RedisServer~callback
  * @argument {Error} err
  */
 
 const childprocess = require('child_process');
 const events = require('events');
-const keyRE = /(port:\s+\d+)|(pid:\s+\d+)|(already\s+in\s+use)|(not\s+listen)|error|denied/ig;
-const strRE = / /ig;
+const PromiseQueue = require('promise-queue');
+const keyRE = /now\sready|already\sin\suse|not\slisten|error|denied/ig;
+const whiteSpaceRE = / /ig;
 
 /**
- * Start and stop a Redis server like a boss.
+ * Start and stop a local Redis server like a boss.
  * @class
  */
-module.exports = exports = class RedisServer extends events.EventEmitter {
+class RedisServer extends events.EventEmitter {
 
   /**
-   * Populate a given `Config` with values from a given `Config`.
+   * Populate a given {@link RedisServer~Config} with values from a
+   * given {@link RedisServer~Config}.
    * @protected
-   * @argument {Config} source
-   * @argument {Config} target
-   * @return {Config}
+   * @argument {RedisServer~Config} source
+   * @argument {RedisServer~Config} target
+   * @return {RedisServer~Config}
    */
   static parseConfig(source, target) {
     if (target == null) {
@@ -39,6 +42,10 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
 
     if (source == null) {
       return target;
+    }
+
+    if (source.bin != null) {
+      target.bin = source.bin;
     }
 
     if (source.conf != null) {
@@ -55,18 +62,14 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
       target.port = source.port;
     }
 
-    if (source.bin != null) {
-      target.bin = source.bin;
-    }
-
     return target;
   }
 
   /**
-   * Parse Process flags for Redis from a given `Config`.
+   * Parse process flags for Redis from a given {@link RedisServer~Config}.
    * @protected
-   * @argument {Config} config
-   * @return {String[]}
+   * @argument {RedisServer~Config} config
+   * @return {Array.<String>}
    */
   static parseFlags(config) {
     if (config.conf != null) {
@@ -87,173 +90,171 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Start a given `RedisServer`.
+   * Start a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
-   * @argument {Boolean} isCallback
    * @return {Promise}
    */
-  static open(server, isCallback) {
-    if (server.isClosing) {
-      server.openPromise = new Promise((resolve, reject) => {
-        const open = () =>
-          exports.open(server, true).then(resolve).catch(reject);
-
-        server.isClosing = false;
-        server.isOpening = true;
-
-        server.closePromise.then(open).catch(open);
-      });
-
+  static open(server) {
+    if (server.isOpening) {
       return server.openPromise;
     }
 
-    if (server.isOpening && !isCallback || server.isRunning) {
-      return server.openPromise;
-    }
+    server.isOpening = true;
+    server.isClosing = false;
+    server.openPromise = server.promiseQueue.add(() => {
+      if (server.isClosing || server.isRunning) {
+        server.isOpening = false;
 
-    server.openPromise = new Promise((resolve, reject) => {
-      server.isOpening = true;
+        return Promise.resolve(null);
+      }
 
-      server.emit('opening');
+      return new Promise((resolve, reject) => {
+        server.emit('opening');
 
-      server.process = childprocess.spawn(
-        server.config.bin,
-        exports.parseFlags(server.config)
-      );
+        server.process = childprocess.spawn(
+          server.config.bin,
+          RedisServer.parseFlags(server.config)
+        );
 
-      const matchHandler = (value) => {
-        const t = value.split(':');
-        const k = t[0].replace(strRE, '').toLowerCase();
-        const v = t[1];
-        let err = null;
+        /**
+         * Parse a given {@linkcode match} and return a {@linkcode Boolean}
+         * indicating if more are expected. Returns {@linkcode true} when a
+         * given {@linkcode match} results in the current {@link Promise}
+         * being resolved or rejected.
+         * @argument {String} match
+         * @return {Boolean}
+         */
+        const matchHandler = (match) => {
+          let err = null;
 
-        switch (k) {
-          case 'alreadyinuse':
-            err = new Error('Address already in use');
-            err.code = -1;
+          switch (match.replace(whiteSpaceRE, '').toLowerCase()) {
+            case 'alreadyinuse':
+              err = new Error('Address already in use');
+              err.code = -1;
 
-            break;
+              break;
 
-          case 'denied':
-            err = new Error('Permission denied');
-            err.code = -2;
+            case 'denied':
+              err = new Error('Permission denied');
+              err.code = -2;
 
-            break;
+              break;
 
-          case 'error':
-          case 'notlisten':
-            err = new Error('Invalid port number');
-            err.code = -3;
+            case 'error':
+            case 'notlisten':
+              err = new Error('Invalid port number');
+              err.code = -3;
 
-            break;
+              break;
 
-          case 'pid':
-          case 'port':
-            server[k] = Number(v);
-
-            if (!(server.port === null || server.pid === null)) {
+            case 'nowready':
               server.isRunning = true;
 
               server.emit('open');
 
               break;
-            }
 
-            return false;
+            default:
+              // istanbul ignore next
+              return false;
+          }
 
-          default:
-            return false;
-        }
+          server.isOpening = false;
 
-        server.isOpening = false;
+          if (err === null) {
+            resolve(null);
+          }
+          else {
+            reject(err);
+          }
 
-        if (err === null) {
-          resolve(null);
-        }
-        else {
-          reject(err);
-        }
+          return true;
+        };
 
-        return true;
-      };
+        /**
+         * A handler to parse data from the server's stdout and forward
+         * {@link keyRE} matches to {@link matchHandler} until resolves
+         * or rejects the current {@link Promise}.
+         * @argument {Buffer} data
+         * @return {undefined}
+         */
+        const dataHandler = (data) => {
+          const matches = data.toString().match(keyRE);
 
-      const dataHandler = (value) => {
-        const matches = value.toString().match(keyRE);
+          if (matches !== null) {
+            for (let match of matches) {
+              if (matchHandler(match)) {
+                server.process.stdout.removeListener('data', dataHandler);
 
-        if (matches !== null) {
-          for (let match of matches) {
-            if (matchHandler(match)) {
-              return server.process.stdout.removeListener('data', dataHandler);
+                return;
+              }
             }
           }
-        }
-      };
+        };
 
-      const exitHandler = () => {
-        server.close();
-      };
+        /**
+         * A handler to close the server when the current process exits.
+         * @return {undefined}
+         */
+        const exitHandler = () => {
+          // istanbul ignore next
+          server.close();
+        };
 
-      server.process.stdout.on('data', dataHandler);
-      server.process.on('close', () => {
-        server.process = null;
-        server.port = null;
-        server.pid = null;
-        server.isRunning = false;
-        server.isClosing = false;
+        server.process.stdout.on('data', dataHandler);
+        server.process.on('close', () => {
+          server.process = null;
+          server.isRunning = false;
+          server.isClosing = false;
 
-        process.removeListener('exit', exitHandler);
-        server.emit('close');
+          process.removeListener('exit', exitHandler);
+          server.emit('close');
+        });
+        server.process.stdout.on('data', (data) => {
+          server.emit('stdout', data.toString());
+        });
+        process.on('exit', exitHandler);
       });
-      server.process.stdout.on('data', (data) => {
-        server.emit('stdout', data.toString());
-      });
-      process.on('exit', exitHandler);
     });
 
     return server.openPromise;
   }
 
   /**
-   * Stop a given `RedisServer`.
+   * Stop a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
-   * @argument {Boolean} isCallback
    * @return {Promise}
    */
-  static close(server, isCallback) {
-    if (server.isOpening) {
-      server.closePromise = new Promise((resolve, reject) => {
-        const close = () =>
-          exports.close(server, true).then(resolve).catch(reject);
+  static close(server) {
+    if (server.isClosing) {
+      return server.closePromise;
+    }
 
-        server.isOpening = false;
-        server.isClosing = true;
+    server.isClosing = true;
+    server.isOpening = false;
+    server.closePromise = server.promiseQueue.add(() => {
+      if (server.isOpening || !server.isRunning) {
+        server.isClosing = false;
 
-        server.openPromise.then(close).catch(close);
+        return Promise.resolve(null);
+      }
+
+      return new Promise((resolve) => {
+        server.emit('closing');
+        server.process.once('close', () => resolve(null));
+        server.process.kill();
       });
-
-      return server.closePromise;
-    }
-
-    if (server.isClosing && !isCallback || !server.isRunning) {
-      return server.closePromise;
-    }
-
-    server.closePromise = new Promise((resolve) => {
-      server.isClosing = true;
-
-      server.emit('closing');
-      server.process.once('close', () => resolve(null));
-      server.process.kill();
     });
 
     return server.closePromise;
   }
 
   /**
-   * Construct a new `RedisServer`.
-   * @argument {(Number|String|Config)} [configOrPort]
+   * Construct a new {@link RedisServer}.
+   * @argument {(Number|String|RedisServer~Config)} [configOrPort]
+   * A number or string that is a port or an object for configuration.
    */
   constructor(configOrPort) {
     super();
@@ -261,72 +262,71 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
     /**
      * Configuration options.
      * @protected
-     * @type {Config}
+     * @type {RedisServer~Config}
      */
     this.config = {
       bin: 'redis-server',
       conf: null,
       port: 6379,
-      slaveof: null,
+      slaveof: null
     };
-
-    /**
-     * The current process ID.
-     * @protected
-     * @type {Number}
-     */
-    this.pid = null;
-
-    /**
-     * The port the Redis server is currently bound to.
-     * @protected
-     * @type {Number}
-     */
-    this.port = null;
 
     /**
      * The current process.
      * @protected
-     * @type {Object}
+     * @type {ChildProcess}
      */
     this.process = null;
 
     /**
-     * The last `Promise` returned by `open()`.
+     * The last {@link Promise} returned by {@link RedisServer#open}.
      * @protected
      * @type {Promise}
      */
     this.openPromise = Promise.resolve(null);
 
     /**
-     * The last `Promise` returned by `close()`.
+     * The last {@link Promise} returned by {@link RedisServer#close}.
      * @protected
      * @type {Promise}
      */
     this.closePromise = Promise.resolve(null);
 
     /**
-     * Determine if the instance is closing a Redis server; true while a process
-     * is being killed until the contained Redis server closes.
+     * A serial queue of open and close promises.
+     * @protected
+     * @type {PromiseQueue}
+     */
+    this.promiseQueue = new PromiseQueue(1);
+
+    /**
+     * Determine if the instance is closing a Redis server; {@linkcode true}
+     * while a process is being, or about to be, killed until the
+     * contained Redis server either closes or errs.
+     * @readonly
      * @type {Boolean}
      */
     this.isClosing = false;
 
     /**
-     * Determine if the instance is starting a Redis server; true while a
-     * process is spawning until a Redis server starts or errs.
+     * Determine if the instance is starting a Redis server; {@linkcode true}
+     * while a process is spawning, or about tobe spawned, until the
+     * contained Redis server either starts or errs.
+     * @readonly
      * @type {Boolean}
      */
     this.isRunning = false;
 
     /**
-     * Determine if the instance is running a Redis server; true once a process
-     * has spawned and the contained Redis server is ready to service requests.
+     * Determine if the instance is running a Redis server; {@linkcode true}
+     * once a process has spawned and the contained Redis server is ready
+     * to service requests.
+     * @readonly
      * @type {Boolean}
      */
     this.isOpening = false;
 
-    // Parse the given `Config`.
+    // Parse the given {RedisServer~Config}.
     if (typeof configOrPort === 'number' || typeof configOrPort === 'string') {
       this.config.port = configOrPort;
     }
@@ -341,13 +341,13 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
    * @return {Promise}
    */
   open(callback) {
-    const promise = exports.open(this, false);
+    const promise = RedisServer.open(this, false);
 
-    if (typeof callback === 'function') {
-      promise.then(callback).catch(callback);
-    }
-
-    return promise;
+    return typeof callback === 'function'
+    ? promise
+      .then((v) => callback(null, v))
+      .catch((e) => callback(e, null))
+    : promise;
   }
 
   /**
@@ -356,12 +356,14 @@ module.exports = exports = class RedisServer extends events.EventEmitter {
    * @return {Promise}
    */
   close(callback) {
-    const promise = exports.close(this, false);
+    const promise = RedisServer.close(this, false);
 
-    if (typeof callback === 'function') {
-      promise.then(callback).catch(callback);
-    }
-
-    return promise;
+    return typeof callback === 'function'
+    ? promise
+      .then((v) => callback(null, v))
+      .catch((e) => callback(e, null))
+    : promise;
   }
-};
+}
+
+module.exports = exports = RedisServer;

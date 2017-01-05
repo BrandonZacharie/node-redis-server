@@ -1,10 +1,15 @@
 language: node_js
 node_js:
 - '4.0'
+- '4'
+- '5'
 - '6.0'
-- '7.2'
+- '6'
+- '7'
 sudo: false
-script: npm run ci
+script: npm run lint && npm test
+after_success:
+- cat coverage/lcov.info | node_modules/.bin/coveralls
 notifications:
   email: false
   slack:

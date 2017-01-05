@@ -1,14 +1,19 @@
 # redis-server
 
-[![NPM version](https://badge.fury.io/js/redis-server.svg)](http://badge.fury.io/js/redis-server)
-[![Build Status](https://travis-ci.org/BrandonZacharie/node-redis-server.svg?branch=master)](https://travis-ci.org/BrandonZacharie/node-redis-server)
-[![Coverage Status](https://coveralls.io/repos/github/BrandonZacharie/node-redis-server/badge.svg?branch=master)](https://coveralls.io/github/BrandonZacharie/node-redis-server?branch=master)
+[![NPM version](https://img.shields.io/npm/v/redis-server.svg)](https://www.npmjs.com/package/redis-server)
+[![Build Status](https://img.shields.io/travis/BrandonZacharie/node-redis-server/master.svg)](https://travis-ci.org/BrandonZacharie/node-redis-server)
+[![Coverage Status](https://img.shields.io/coveralls/BrandonZacharie/node-redis-server/master.svg)](https://coveralls.io/github/BrandonZacharie/node-redis-server?branch=master)
+[![License](https://img.shields.io/npm/l/redis-server.svg)](https://github.com/BrandonZacharie/node-redis-server/blob/master/LICENSE.md)
 
 Start and stop a local Redis server in Node.js like a boss.
 
 ## Installation
 
-```npm install redis-server```
+```Bash
+
+npm install redis-server
+
+```
 
 ## Usage
 
@@ -128,7 +133,8 @@ server.close((err) => {
 #### RedisServer#isOpening
 
 Determine if the instance is starting a Redis server; `true` while a
-process is spawning until a Redis server starts or errs.
+process is spawning, and/or about to be spawned, until the contained Redis
+server either starts or errs.
 
 #### RedisServer#isRunning
 
@@ -138,7 +144,8 @@ has spawned and the contained Redis server is ready to service requests.
 #### RedisServer#isClosing
 
 Determine if the instance is closing a Redis server; `true` while a
-process is being killed until the contained Redis server closes.
+process is being, or about to be, killed until the contained Redis server either
+closes or errs.
 
 ### Events
 
