@@ -156,6 +156,7 @@ class RedisServer extends events.EventEmitter {
               break;
 
             default:
+              // istanbul ignore next
               return false;
           }
 
@@ -197,6 +198,7 @@ class RedisServer extends events.EventEmitter {
          * @return {undefined}
          */
         const exitHandler = () => {
+          // istanbul ignore next
           server.close();
         };
 

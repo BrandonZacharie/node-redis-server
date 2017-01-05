@@ -12,7 +12,7 @@ const describe = mocha.describe;
 const it = mocha.it;
 
 /**
- * Get a random port number between 9000 and 10000.
+ * Get a random port number.
  * @return {Number}
  */
 const generateRandomPort = () =>
@@ -20,7 +20,7 @@ const generateRandomPort = () =>
 
 /**
  * Get a {@link Promise} that is resolved or rejected when the given
- * {@linkcode delegate} invokes the Node.js style callback provided.
+ * {@linkcode delegate} invokes the callback it is provided.
  * @argument {Function} delegate
  * @return {Promise}
  */
@@ -37,7 +37,7 @@ const promisify = (delegate) =>
   });
 
 /**
- * Expect a given {@linkcode server} to not be opening closing or running.
+ * Expect a given {@linkcode server} to not be opening, closing, or running.
  * @argument {RedisServer} server
  * @return {undefined}
  */
@@ -424,6 +424,22 @@ describe('RedisServer', () => {
       return server.open()
       .then(() => expectToClose(server))
       .then(() => expectIdle(server));
+    });
+    it('should report any error when applicable', () => {
+      const server = new RedisServer(generateRandomPort());
+      const close = RedisServer.close;
+
+      RedisServer.close = () =>
+        Promise.resolve(new Error());
+
+      return server.open(() => {
+        return server.close((err, res) => {
+          RedisServer.close = close;
+
+          expect(err).to.be.an('error');
+          expect(res).to.equal(null);
+        });
+      });
     });
     it('should do nothing when a server is already stopping', () => {
       const server = new RedisServer(generateRandomPort());
