@@ -430,7 +430,7 @@ describe('RedisServer', () => {
       const close = RedisServer.close;
 
       RedisServer.close = () =>
-        Promise.resolve(new Error());
+        Promise.reject(new Error());
 
       return server.open(() => {
         return server.close((err, res) => {
