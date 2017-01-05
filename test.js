@@ -262,6 +262,13 @@ describe('RedisServer', () => {
         return server.close();
       });
     });
+    it('should do nothing when a server is already starting', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      expect(server.open()).to.equal(server.open());
+
+      return server.close();
+    });
     it('should do nothing when a server is already started', () => {
       const server = new RedisServer(generateRandomPort());
 
@@ -417,6 +424,15 @@ describe('RedisServer', () => {
       return server.open()
       .then(() => expectToClose(server))
       .then(() => expectIdle(server));
+    });
+    it('should do nothing when a server is already stopping', () => {
+      const server = new RedisServer(generateRandomPort());
+
+      return server.open().then(() => {
+        expect(server.close()).to.equal(server.close());
+
+        return server.close();
+      });
     });
     it('should do nothing when a server is already stopped', () => {
       const server = new RedisServer(generateRandomPort());
