@@ -18,8 +18,12 @@
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
-const keyRE = /now\sready|already\sin\suse|not\slisten|error|denied/ig;
-const whiteSpaceRE = / /ig;
+const regExp = {
+  terminalMessage: /now\sready|already\sin\suse|not\slisten|error|denied/im,
+  errorMessage: /#\s+(.*error.*)/im,
+  singleWhiteSpace: /\s/g,
+  multipleWhiteSpace: /\s\s+/g
+};
 
 /**
  * Start and stop a local Redis server like a boss.
@@ -96,6 +100,64 @@ class RedisServer extends events.EventEmitter {
   }
 
   /**
+   * Parse Redis server output for terminal messages.
+   * @protected
+   * @argument {String} string
+   * @return {Object}
+   */
+  static parseData(string) {
+    const matches = regExp.terminalMessage.exec(string);
+
+    if (matches === null) {
+      return null;
+    }
+
+    const result = {
+      err: null,
+      key: matches
+      .pop()
+      .replace(regExp.singleWhiteSpace, '')
+      .toLowerCase()
+    };
+
+    switch (result.key) {
+      case 'nowready':
+        break;
+
+      case 'alreadyinuse':
+        result.err = new Error('Address already in use');
+        result.err.code = -1;
+
+        break;
+
+      case 'denied':
+        result.err = new Error('Permission denied');
+        result.err.code = -2;
+
+        break;
+
+      case 'notlisten':
+        result.err = new Error('Invalid port number');
+        result.err.code = -3;
+
+        break;
+
+      case 'error':
+        result.err = new Error(
+          regExp.errorMessage
+          .exec(string)
+          .pop()
+          .replace(regExp.multipleWhiteSpace, ' ')
+        );
+        result.err.code = -4;
+
+        break;
+    }
+
+    return result;
+  }
+
+  /**
    * Start a given {@link RedisServer}.
    * @protected
    * @argument {RedisServer} server
@@ -124,103 +186,54 @@ class RedisServer extends events.EventEmitter {
         );
 
         /**
-         * Parse a given {@linkcode match} and return a {@linkcode Boolean}
-         * indicating if more are expected. Returns {@linkcode true} when a
-         * given {@linkcode match} results in the current {@link Promise}
-         * being resolved or rejected.
-         * @argument {String} match
-         * @return {Boolean}
+         * A listener for the current server process' stdout that resolves or
+         * rejects the current {@link Promise} when done.
+         * @see RedisServer.parseData
+         * @argument {Buffer} buffer
+         * @return {undefined}
          */
-        const matchHandler = (match) => {
-          let err = null;
+        const dataListener = (buffer) => {
+          const result = RedisServer.parseData(buffer.toString());
 
-          switch (match.replace(whiteSpaceRE, '').toLowerCase()) {
-            case 'alreadyinuse':
-              err = new Error('Address already in use');
-              err.code = -1;
-
-              break;
-
-            case 'denied':
-              err = new Error('Permission denied');
-              err.code = -2;
-
-              break;
-
-            case 'error':
-            case 'notlisten':
-              err = new Error('Invalid port number');
-              err.code = -3;
-
-              break;
-
-            case 'nowready':
-              server.isRunning = true;
-
-              server.emit('open');
-
-              break;
-
-            default:
-              // istanbul ignore next
-              return false;
+          if (result === null) {
+            return;
           }
+
+          server.process.stdout.removeListener('data', dataListener);
 
           server.isOpening = false;
 
-          if (err === null) {
-            resolve(null);
-          }
-          else {
-            reject(err);
+          if (result.err !== null) {
+            return reject(result.err);
           }
 
-          return true;
+          server.isRunning = true;
+
+          resolve(null);
         };
 
         /**
-         * A handler to parse data from the server's stdout and forward
-         * {@link keyRE} matches to {@link matchHandler} until resolves
-         * or rejects the current {@link Promise}.
-         * @argument {Buffer} data
+         * A listener to close the server when the current process exits.
          * @return {undefined}
          */
-        const dataHandler = (data) => {
-          const matches = data.toString().match(keyRE);
-
-          if (matches !== null) {
-            for (let match of matches) {
-              if (matchHandler(match)) {
-                server.process.stdout.removeListener('data', dataHandler);
-
-                return;
-              }
-            }
-          }
-        };
-
-        /**
-         * A handler to close the server when the current process exits.
-         * @return {undefined}
-         */
-        const exitHandler = () => {
+        const exitListener = () => {
           // istanbul ignore next
           server.close();
         };
 
-        server.process.stdout.on('data', dataHandler);
+        server.process.stdout.on('data', dataListener);
         server.process.on('close', () => {
           server.process = null;
           server.isRunning = false;
           server.isClosing = false;
 
-          process.removeListener('exit', exitHandler);
+          process.removeListener('exit', exitListener);
           server.emit('close');
         });
         server.process.stdout.on('data', (data) => {
           server.emit('stdout', data.toString());
         });
-        process.on('exit', exitHandler);
+        process.on('exit', exitListener);
       });
     });
 

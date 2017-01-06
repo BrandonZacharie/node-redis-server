@@ -213,6 +213,57 @@ describe('RedisServer', () => {
       expect(RedisServer.parseFlags(config)).to.eql([config.conf]);
     });
   });
+  describe('.parseData()', () => {
+    it('parses a "ready to accept connections" message', () => {
+      const string = '25683:M 06 Jan 11:53:05.426 * The server is now ready \
+      to accept connections on port 6379';
+
+      expect(RedisServer.parseData(string))
+      .to.have.property('err').equal(null);
+    });
+    it('parses a "Address already in use" error', () => {
+      const string = '26513:M 06 Jan 11:59:10.308 # Creating Server TCP \
+      listening socket *:6379: bind: Address already in use';
+
+      expect(RedisServer.parseData(string))
+      .to.have.property('err').be.an('error').with.property('code').equal(-1);
+    });
+    it('parses a "Permission denied" error', () => {
+      const string = '26637:M 06 Jan 12:09:39.470 # Creating Server TCP \
+      listening socket *:1: bind: Permission denied';
+
+      expect(RedisServer.parseData(string))
+      .to.have.property('err').be.an('error').with.property('code').equal(-2);
+    });
+    it('parses a "Configured to not listen" error', () => {
+      const string = '26559:M 06 Jan 12:05:09.961 # Configured to not listen \
+      anywhere, exiting.';
+
+      expect(RedisServer.parseData(string))
+      .to.have.property('err').be.an('error').with.property('code').equal(-3);
+    });
+    it('parses a "Fatal" error', () => {
+      const string = '26939:C 06 Jan 12:15:11.241 # Fatal error, can\'t open \
+      config file \'node_databases\'';
+
+      expect(RedisServer.parseData(string))
+      .to.have.property('err').be.an('error').with.property('code').equal(-4);
+    });
+    it('parses a "Unrecoverable" error', () => {
+      const string = '27785:M 06 Jan 12:45:17.671 # Short read or OOM loading \
+      DB. Unrecoverable error, aborting now.';
+
+      expect(RedisServer.parseData(string))
+      .to.have.property('err').be.an('error').with.property('code').equal(-4);
+    });
+    it('returns `null` when given an unrecognized value', () => {
+      const values = ['invalid', '', null, undefined, {}, 1234];
+
+      for (let value of values) {
+        expect(RedisServer.parseData(value)).to.equal(null);
+      }
+    });
+  });
   describe('#constructor()', () => {
     it('constructs a new instance', () => {
       const server = new RedisServer();
