@@ -339,7 +339,7 @@ class RedisServer extends events.EventEmitter {
    * @return {Promise}
    */
   open(callback) {
-    const promise = RedisServer.open(this, false);
+    const promise = RedisServer.open(this);
 
     return typeof callback === 'function'
     ? promise
@@ -354,7 +354,7 @@ class RedisServer extends events.EventEmitter {
    * @return {Promise}
    */
   close(callback) {
-    const promise = RedisServer.close(this, false);
+    const promise = RedisServer.close(this);
 
     return typeof callback === 'function'
     ? promise
