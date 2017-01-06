@@ -40,7 +40,13 @@ class RedisServer extends events.EventEmitter {
       target = Object.create(null);
     }
 
-    if (source == null) {
+    if (typeof source === 'number' || typeof source === 'string') {
+      target.port = source;
+
+      return target;
+    }
+
+    if (source == null || typeof source !== 'object') {
       return target;
     }
 
@@ -264,12 +270,12 @@ class RedisServer extends events.EventEmitter {
      * @protected
      * @type {RedisServer~Config}
      */
-    this.config = {
+    this.config = RedisServer.parseConfig(configOrPort, {
       bin: 'redis-server',
       conf: null,
       port: 6379,
       slaveof: null
-    };
+    });
 
     /**
      * The current process.
@@ -325,14 +331,6 @@ class RedisServer extends events.EventEmitter {
      * @type {Boolean}
      */
     this.isOpening = false;
-
-    // Parse the given {RedisServer~Config}.
-    if (typeof configOrPort === 'number' || typeof configOrPort === 'string') {
-      this.config.port = configOrPort;
-    }
-    else if (typeof configOrPort === 'object') {
-      RedisServer.parseConfig(configOrPort, this.config);
-    }
   }
 
   /**

@@ -174,6 +174,24 @@ describe('RedisServer', () => {
       expect(RedisServer.parseConfig()).to.be.an('object');
       expect(RedisServer.parseConfig(null)).to.be.an('object');
     });
+    it('accepts a port as a string', () => {
+      const port = '1234';
+      const config = RedisServer.parseConfig(port);
+
+      expect(config).to.have.property('port').equal(port);
+    });
+    it('accepts a port as a number', () => {
+      const port = 1234;
+      const config = RedisServer.parseConfig(port);
+
+      expect(config).to.have.property('port').equal(port);
+    });
+    it('accepts a configuration object', () => {
+      const expectedObject = { bin, port, slaveof };
+      const actualObject = RedisServer.parseConfig(expectedObject);
+
+      expect(actualObject).to.eql(expectedObject);
+    });
   });
   describe('.parseFlags()', () => {
     it('should return an empty array when given an empty object', () => {
@@ -205,30 +223,23 @@ describe('RedisServer', () => {
     it('throws when invoked without the `new` keyword', () => {
       expect(RedisServer).to.throw();
     });
-    it('accepts a port as a string', () => {
-      const server = new RedisServer('1234');
+    it('calls .parseConfig', () => {
+      const parseConfig = RedisServer.parseConfig;
+      let expectedObject = { port };
+      let actualObject = null;
 
-      expectIdle(server);
-      expect(server.process).to.equal(null);
-      expect(server.config.port).to.equal('1234');
-    });
-    it('accepts a port as a number', () => {
-      const server = new RedisServer(1234);
+      RedisServer.parseConfig = (source, target) => {
+        actualObject = source;
 
-      expectIdle(server);
-      expect(server.process).to.equal(null);
-      expect(server.config.port).to.equal(1234);
-    });
-    it('accepts a configuration object', () => {
-      const config = { bin, port, slaveof };
-      const server = new RedisServer(config);
+        return parseConfig(source, target);
+      };
 
-      expectIdle(server);
-      expect(server.process).to.equal(null);
+      const server = new RedisServer(expectedObject);
 
-      for (let key of Object.keys(config)) {
-        expect(server.config).to.have.property(key).equal(config[key]);
-      }
+      RedisServer.parseConfig = parseConfig;
+
+      expect(actualObject).to.equal(expectedObject);
+      expect(server.config.port).to.equal(expectedObject.port);
     });
   });
   describe('#open()', () => {
