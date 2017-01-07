@@ -173,6 +173,7 @@ describe('RedisServer', () => {
     it('should work without arguments', () => {
       expect(RedisServer.parseConfig()).to.be.an('object');
       expect(RedisServer.parseConfig(null)).to.be.an('object');
+      expect(RedisServer.parseConfig({ port: null })).to.be.an('object');
     });
     it('accepts a port as a string', () => {
       const port = '1234';
