@@ -178,13 +178,6 @@ class RedisServer extends events.EventEmitter {
       }
 
       return new Promise((resolve, reject) => {
-        server.emit('opening');
-
-        server.process = childprocess.spawn(
-          server.config.bin,
-          RedisServer.parseFlags(server.config)
-        );
-
         /**
          * A listener for the current server process' stdout that resolves or
          * rejects the current {@link Promise} when done.
@@ -209,6 +202,7 @@ class RedisServer extends events.EventEmitter {
 
           server.isRunning = true;
 
+          server.emit('open');
           resolve(null);
         };
 
@@ -220,6 +214,13 @@ class RedisServer extends events.EventEmitter {
           // istanbul ignore next
           server.close();
         };
+
+        server.emit('opening');
+
+        server.process = childprocess.spawn(
+          server.config.bin,
+          RedisServer.parseFlags(server.config)
+        );
 
         server.process.stdout.on('data', dataListener);
         server.process.on('close', () => {
