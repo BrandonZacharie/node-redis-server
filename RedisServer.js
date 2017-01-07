@@ -15,6 +15,31 @@
  * @argument {Error} err
  */
 
+/**
+ * Emitted when a Redis server prints to stdout.
+ * @event RedisServer#stdout
+ */
+
+/**
+ * Emitted when attempting to start a Redis server.
+ * @event RedisServer#opening
+ */
+
+/**
+ * Emitted when a Redis server becomes ready to service requests.
+ * @event RedisServer#open
+ */
+
+/**
+ * Emitted when attempting to stop a Redis server.
+ * @event RedisServer#closing
+ */
+
+/**
+ * Emitted once a Redis server has stopped.
+ * @event RedisServer#close
+ */
+
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
@@ -160,6 +185,11 @@ class RedisServer extends events.EventEmitter {
   /**
    * Start a given {@link RedisServer}.
    * @protected
+   * @fires RedisServer#stdout
+   * @fires RedisServer#opening
+   * @fires RedisServer#open
+   * @fires RedisServer#closing
+   * @fires RedisServer#close
    * @argument {RedisServer} server
    * @return {Promise}
    */
@@ -248,6 +278,7 @@ class RedisServer extends events.EventEmitter {
   /**
    * Stop a given {@link RedisServer}.
    * @protected
+   * @fires RedisServer#closing
    * @argument {RedisServer} server
    * @return {Promise}
    */

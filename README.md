@@ -153,10 +153,18 @@ closes or errs.
 
 Emitted when a Redis server prints to stdout.
 
+#### opening
+
+Emitted when attempting to start a Redis server.
+
 #### open
 
 Emitted when a Redis server becomes ready to service requests.
 
+#### closing
+
+Emitted when attempting to stop a Redis server.
+
 #### close
 
-Emitted when a Redis server closes.
+Emitted once a Redis server has stopped.
