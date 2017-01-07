@@ -196,14 +196,18 @@ class RedisServer extends events.EventEmitter {
 
           server.isOpening = false;
 
-          if (result.err !== null) {
-            return reject(result.err);
+          if (result.err === null) {
+            server.isRunning = true;
+
+            server.emit('open');
+            resolve(null);
           }
+          else {
+            server.isClosing = true;
 
-          server.isRunning = true;
-
-          server.emit('open');
-          resolve(null);
+            server.emit('closing');
+            server.process.once('close', () => reject(result.err));
+          }
         };
 
         /**
