@@ -2,7 +2,7 @@
 
 ## 1.1.0
 
-[Compare commits](https://github.com/BrandonZacharie/node-redis-server/compare/1.1.0...1.0.0)
+[Compare commits](https://github.com/BrandonZacharie/node-redis-server/compare/1.0.0...1.1.0)
 
 * Add a changelog
 * Add `opening` and `closing` events
