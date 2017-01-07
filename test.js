@@ -466,6 +466,36 @@ describe('RedisServer', () => {
         ]);
       });
     });
+    it('emits "opening" when attempting to start a server', () => {
+      const server = new RedisServer(generateRandomPort());
+      let calls = 0;
+
+      server.on('opening', () => ++calls);
+
+      return server.open()
+      .then(() => server.close())
+      .then(() => server.open())
+      .then(() => server.open())
+      .then(() => server.close())
+      .then(() => {
+        expect(calls).to.equal(2);
+      });
+    });
+    it('emits "open" once a server has started', () => {
+      const server = new RedisServer(generateRandomPort());
+      let calls = 0;
+
+      server.on('open', () => ++calls);
+
+      return server.open()
+      .then(() => server.close())
+      .then(() => server.open())
+      .then(() => server.open())
+      .then(() => server.close())
+      .then(() => {
+        expect(calls).to.equal(2);
+      });
+    });
   });
   describe('#close()', () => {
     it('should close a server and execute a callback', (done) => {
@@ -543,6 +573,36 @@ describe('RedisServer', () => {
       ])
       .then(() => {
         expectIdle(server);
+      });
+    });
+    it('emits "closing" when attempting to stop a server', () => {
+      const server = new RedisServer(generateRandomPort());
+      let calls = 0;
+
+      server.on('closing', () => ++calls);
+
+      return server.open()
+      .then(() => server.close())
+      .then(() => server.open())
+      .then(() => server.close())
+      .then(() => server.close())
+      .then(() => {
+        expect(calls).to.equal(2);
+      });
+    });
+    it('emits "close" once a server is stopped', () => {
+      const server = new RedisServer(generateRandomPort());
+      let calls = 0;
+
+      server.on('close', () => ++calls);
+
+      return server.open()
+      .then(() => server.close())
+      .then(() => server.open())
+      .then(() => server.close())
+      .then(() => server.close())
+      .then(() => {
+        expect(calls).to.equal(2);
       });
     });
   });
