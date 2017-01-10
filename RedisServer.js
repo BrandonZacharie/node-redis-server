@@ -174,7 +174,7 @@ class RedisServer extends events.EventEmitter {
           .pop()
           .replace(regExp.multipleWhiteSpace, ' ')
         );
-        result.err.code = -4;
+        result.err.code = -3;
 
         break;
     }
