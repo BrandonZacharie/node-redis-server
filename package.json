@@ -25,8 +25,10 @@
     "node": ">=4.0.0"
   },
   "scripts": {
-    "test": "node_modules/.bin/istanbul cover -x test.js node_modules/.bin/_mocha",
-    "lint": "node_modules/.bin/eslint --ignore-path .gitignore **/*.js"
+    "test": "istanbul cover -x test.js _mocha",
+    "lint": "npm run eslint && npm run remark",
+    "eslint": "eslint --ignore-path .gitignore **/*.js",
+    "remark": "remark ."
   },
   "dependencies": {
     "promise-queue": "^2.2.3"
@@ -36,6 +38,8 @@
     "coveralls": "^2.11.15",
     "eslint": "^3.13.0",
     "istanbul": "^0.4.5",
-    "mocha": "^3.1.2"
+    "mocha": "^3.1.2",
+    "remark-cli": "^2.1.0",
+    "remark-preset-lint-recommended": "^1.0.0"
   }
 }
