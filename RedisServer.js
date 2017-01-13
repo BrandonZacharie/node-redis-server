@@ -183,7 +183,7 @@ class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Start a given {@link RedisServer}.
+   * Start a given {@linkcode server}.
    * @protected
    * @fires RedisServer#stdout
    * @fires RedisServer#opening
@@ -276,7 +276,7 @@ class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Stop a given {@link RedisServer}.
+   * Stop a given {@linkcode server}.
    * @protected
    * @fires RedisServer#closing
    * @argument {RedisServer} server
