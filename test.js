@@ -125,14 +125,12 @@ const parsePort = (server, callback) => {
 
 describe('RedisServer', () => {
   let bin = null;
-  const conf = `./${new Date().toISOString()}.conf`;
+  const conf = `${new Date().toISOString()}.conf`;
   const port = generateRandomPort();
   const slaveof = `::1 ${port}`;
 
   before((done) => {
-    childprocess.exec('pkill redis-server', () => {
-      done();
-    });
+    childprocess.exec('pkill redis-server', () => done());
   });
   before((done) => {
     childprocess.exec('which redis-server', (err, stdout) => {
@@ -148,22 +146,15 @@ describe('RedisServer', () => {
     fs.unlink(conf, done);
   });
   describe('.parseConfig()', () => {
-    it('should parse bin, port, and slaveof', () => {
+    it('parses valid properties only', () => {
       const expectedObject = { bin, port, slaveof };
-      const expectedKeys = Object.keys(expectedObject).sort();
+      const actualObject = RedisServer.parseConfig(
+        Object.assign({ fu: 'bar' }, expectedObject)
+      );
 
-      expectedObject.foo = 'bar';
-
-      const actualObject = RedisServer.parseConfig(expectedObject);
-      const actualKeys = Object.keys(actualObject).sort();
-
-      for (let key of expectedKeys) {
-        expect(actualObject).to.have.property(key).equal(expectedObject[key]);
-      }
-
-      expect(actualKeys).to.eql(expectedKeys);
+      expect(actualObject).to.eql(expectedObject);
     });
-    it('should parse bin and conf only', () => {
+    it('parses bin and conf only when conf is given', () => {
       const expectedObject = { bin, conf, port, slaveof };
       const actualObject = RedisServer.parseConfig(expectedObject);
 
@@ -171,7 +162,7 @@ describe('RedisServer', () => {
       expect(actualObject).to.have.property('conf').equal(expectedObject.conf);
       expect(Object.keys(actualObject)).to.have.length(2);
     });
-    it('should work without arguments', () => {
+    it('works without arguments', () => {
       expect(RedisServer.parseConfig()).to.be.an('object');
       expect(RedisServer.parseConfig(null)).to.be.an('object');
       expect(RedisServer.parseConfig({ port: null })).to.be.an('object');
@@ -186,7 +177,7 @@ describe('RedisServer', () => {
       const port = 1234;
       const config = RedisServer.parseConfig(port);
 
-      expect(config).to.have.property('port').equal(port);
+      expect(config).to.be.an('object').and.have.property('port').equal(port);
     });
     it('accepts a configuration object', () => {
       const expectedObject = { bin, port, slaveof };
@@ -196,10 +187,10 @@ describe('RedisServer', () => {
     });
   });
   describe('.parseFlags()', () => {
-    it('should return an empty array when given an empty object', () => {
+    it('returns an empty array when given an empty object', () => {
       expect(RedisServer.parseFlags({})).to.have.length(0);
     });
-    it('should return port and slaveof', () => {
+    it('parses all flags', () => {
       const config = { bin, port, slaveof };
       const actualFlags = RedisServer.parseFlags(config);
       const expectedFlags = [
@@ -209,7 +200,7 @@ describe('RedisServer', () => {
 
       expect(actualFlags).to.eql(expectedFlags);
     });
-    it('should return conf', () => {
+    it('returns only conf when present', () => {
       const config = { bin, conf, port, slaveof };
 
       expect(RedisServer.parseFlags(config)).to.eql([config.conf]);
@@ -399,13 +390,12 @@ describe('RedisServer', () => {
       const server1 = new RedisServer(port);
       const server2 = new RedisServer(port);
 
-      return server1.open(() => {
-        return server2.open((err) => {
-          expect(err).to.be.an('error').and.have.property('code').equal(-1);
+      return server1.open()
+      .then(() => server2.open((err) => {
+        expect(err).to.be.an('error').and.have.property('code').equal(-1);
 
-          return server1.close();
-        });
-      });
+        return server1.close();
+      }));
     });
     it('should start a server with a given slaveof address', () => {
       const server1 = new RedisServer(port);
@@ -500,13 +490,12 @@ describe('RedisServer', () => {
         expectRunning(server1);
         expectRunning(server2);
         expectRunning(server3);
-
-        return Promise.all([
-          server1.close(),
-          server2.close(),
-          server3.close()
-        ]);
-      });
+      })
+      .then(() => Promise.all([
+        server1.close(),
+        server2.close(),
+        server3.close()
+      ]));
     });
     it('emits "opening" and "open" when starting a server', () => {
       const server = new RedisServer(generateRandomPort());
@@ -537,11 +526,9 @@ describe('RedisServer', () => {
       return server.open((err) => {
         expect(err).to.be.an('error').and.have.property('code').equal(-3);
       })
-      .then(() => {
-        return server.open((err) => {
-          expect(err).to.be.an('error').and.have.property('code').equal(-3);
-        });
-      })
+      .then(() => server.open((err) => {
+        expect(err).to.be.an('error').and.have.property('code').equal(-3);
+      }))
       .then(() => {
         expect(closingCount).to.equal(2);
         expect(closeCount).to.equal(2);
@@ -569,16 +556,15 @@ describe('RedisServer', () => {
       RedisServer.close = () =>
         Promise.reject(new Error());
 
-      return server.open(() => {
-        return server.close((err, res) => {
-          RedisServer.close = close;
+      return server.open()
+      .then(() => server.close((err, res) => {
+        RedisServer.close = close;
 
-          expect(err).to.be.an('error');
-          expect(res).to.equal(null);
+        expect(err).to.be.an('error');
+        expect(res).to.equal(null);
 
-          return server.close();
-        });
-      });
+        return server.close();
+      }));
     });
     it('should do nothing when a server is already stopping', () => {
       const server = new RedisServer(generateRandomPort());
