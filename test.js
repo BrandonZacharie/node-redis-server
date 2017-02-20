@@ -12,6 +12,18 @@ const describe = mocha.describe;
 const it = mocha.it;
 
 /**
+ * Create a Redis configuration file for a given object.
+ * @argument {Object} dict
+ * @argument {String} name
+ * @return {Promise}
+ */
+const createConf = (dict, name) => {
+  let data = Object.keys(dict).reduce((s, k) => s += `${k} ${dict[k]}\n`, '');
+
+  return promisify((done) => fs.writeFile(name, data, done));
+};
+
+/**
  * Get a random port number.
  * @return {Number}
  */
@@ -128,6 +140,7 @@ describe('RedisServer', () => {
   const conf = `${new Date().toISOString()}.conf`;
   const port = generateRandomPort();
   const slaveof = `::1 ${port}`;
+  const bind = '::1 127.0.0.1';
 
   before(() => Promise.all([
     promisify((done) => childprocess.exec('rm -rf *.rdb', done)),
@@ -144,9 +157,7 @@ describe('RedisServer', () => {
       done(err);
     });
   });
-  before((done) => {
-    fs.writeFile(conf, `port ${port}\nbind ::1 127.0.0.1`, done);
-  });
+  before(() => createConf({ port, bind }, conf));
   after((done) => {
     fs.unlink(conf, done);
   });
@@ -459,6 +470,17 @@ describe('RedisServer', () => {
 
         return server.close();
       });
+    });
+    it('fails to start a server with a bad "dir" line Redis conf', () => {
+      const port = generateRandomPort();
+      const conf = `${port}.conf`;
+      const server = new RedisServer({ conf });
+
+      return createConf({ port, bind, dir: 'bad/dir/path' }, conf)
+      .then(() => server.open((err) => {
+        expect(err).to.be.an('error').to.have.property('code').equal(-3);
+      }))
+      .then(() => server.close());
     });
     it('should start a server with a given Redis binary', () => {
       const server = new RedisServer({ bin, port });
