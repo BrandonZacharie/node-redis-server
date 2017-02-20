@@ -35,8 +35,8 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "coveralls": "^2.11.15",
-    "eslint": "^3.13.0",
+    "coveralls": "^2.11.16",
+    "eslint": "^3.15.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.1.2",
     "remark-cli": "^2.1.0",
