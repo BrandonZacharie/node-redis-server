@@ -129,6 +129,11 @@ describe('RedisServer', () => {
   const port = generateRandomPort();
   const slaveof = `::1 ${port}`;
 
+  before(() => Promise.all([
+    promisify((done) => childprocess.exec('rm -rf *.rdb', done)),
+    promisify((done) => childprocess.exec('rm -rf *.log', done)),
+    promisify((done) => childprocess.exec('rm -rf *.conf', done))
+  ]));
   before((done) => {
     childprocess.exec('pkill redis-server', () => done());
   });
