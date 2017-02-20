@@ -19,6 +19,8 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 #### Fixed
 
 - `UnhandledPromiseRejectionWarning` errors appear when some tests fail
+-  `#open()` returning an unresolved promise due to "Can't chdir to '...': No
+such file or directory" errors
 
 ---
 
@@ -36,7 +38,8 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 #### Fixed
 
-- `#isClosing` not set to `true` when a server is closing due to a start-up error
+- `#isClosing` not set to `true` when a server is closing due to a
+start-up error
 
 ---
 
