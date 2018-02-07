@@ -224,13 +224,18 @@ describe('RedisServer', () => {
   });
   describe('.parseData()', () => {
     it('parses a "ready to accept connections" message', () => {
-      const result = RedisServer.parseData(
+      const messages = [
         '25683:M 06 Jan 11:53:05.426 * The server is now ready \
-        to accept connections on port 6379'
-      );
+        to accept connections on port 6379',
+        '3792:M 07 Feb 01:14:17.079 * Ready to accept connections'
+      ];
 
-      expect(result).to.be.an('object').and.have.property('err');
-      expect(result.err).to.equal(null);
+      for (let message of messages) {
+        const result = RedisServer.parseData(message);
+
+        expect(result).to.be.an('object').and.have.property('err');
+        expect(result.err).to.equal(null);
+      }
     });
     it('parses a "Address already in use" error', () => {
       const result = RedisServer.parseData(
