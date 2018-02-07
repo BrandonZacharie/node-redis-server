@@ -140,9 +140,9 @@ class RedisServer extends events.EventEmitter {
     const result = {
       err: null,
       key: matches
-      .pop()
-      .replace(regExp.singleWhiteSpace, '')
-      .toLowerCase()
+        .pop()
+        .replace(regExp.singleWhiteSpace, '')
+        .toLowerCase()
     };
 
     switch (result.key) {
@@ -171,9 +171,9 @@ class RedisServer extends events.EventEmitter {
       case 'error':
         result.err = new Error(
           regExp.errorMessage
-          .exec(string)
-          .pop()
-          .replace(regExp.multipleWhiteSpace, ' ')
+            .exec(string)
+            .pop()
+            .replace(regExp.multipleWhiteSpace, ' ')
         );
         result.err.code = -3;
 
@@ -391,11 +391,13 @@ class RedisServer extends events.EventEmitter {
   open(callback) {
     const promise = RedisServer.open(this);
 
-    return typeof callback === 'function'
-    ? promise
-      .then((v) => callback(null, v))
-      .catch((e) => callback(e, null))
-    : promise;
+    if (typeof callback === 'function') {
+      return promise
+        .then((v) => callback(null, v))
+        .catch((e) => callback(e, null));
+    }
+
+    return promise;
   }
 
   /**
@@ -406,11 +408,13 @@ class RedisServer extends events.EventEmitter {
   close(callback) {
     const promise = RedisServer.close(this);
 
-    return typeof callback === 'function'
-    ? promise
-      .then((v) => callback(null, v))
-      .catch((e) => callback(e, null))
-    : promise;
+    if (typeof callback === 'function') {
+      return promise
+        .then((v) => callback(null, v))
+        .catch((e) => callback(e, null));
+    }
+
+    return promise;
   }
 }
 
