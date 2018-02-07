@@ -11,10 +11,21 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 #### Added
 
 - Change log entries for releases prior to 1.0.0
+- Add support for Redis 4.0
 
 #### Changed
 
 - Change log format based on [http://keepachangelog.com/en/0.3.0/]()
+- Update dependencies
+  - promise-queue 2.2.5
+- Update dev dependencies
+  - chai 4.1.2
+  - coveralls 3.0.0
+  - eslint 4.17.0
+  - mocha 5.0.0
+  - remark-cli 5.0.0
+  - remark-preset-lint-recommended 3.0.1
+- Change test framework from istanbul to nyc
 
 #### Fixed
 
