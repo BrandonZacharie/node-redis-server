@@ -145,8 +145,8 @@ describe('RedisServer', () => {
   let bin = null;
   const conf = `${new Date().toISOString()}.conf`;
   const port = generateRandomPort();
-  const slaveof = `::1 ${port}`;
-  const bind = '::1 127.0.0.1';
+  const slaveof = `127.0.0.1 ${port}`;
+  const bind = '127.0.0.1';
 
   before(() => Promise.all([
     promisify((done) => childprocess.exec('rm -rf *.rdb', done)),
