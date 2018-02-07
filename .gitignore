@@ -2,6 +2,7 @@ node_modules
 coverage
 out
 .DS_Store
+.nyc_output
 *.conf
 *.rdb
 *.log

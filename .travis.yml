@@ -7,9 +7,11 @@ node_js:
 - '6'
 - '7'
 sudo: false
-script: npm run lint && npm test
+script:
+- npm run lint
+- npm test -- -- -- --bail --timeout 5000 --reporter dot
 after_success:
-- cat coverage/lcov.info | node_modules/.bin/coveralls
+- npm run coveralls
 notifications:
   email: false
   slack:
