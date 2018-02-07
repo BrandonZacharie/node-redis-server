@@ -6,7 +6,7 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ---
 
-### [Unreleased][]
+### [1.2.0][] — 2018-02-07
 
 #### Added
 
@@ -26,6 +26,7 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
   - remark-cli 5.0.0
   - remark-preset-lint-recommended 3.0.1
 - Change test framework from istanbul to nyc
+- Update test matrix; remove Node.js v5 and v7; add Node.js v9
 
 #### Fixed
 
@@ -150,7 +151,8 @@ start-up error
 
 - Initial release
 
-[Unreleased]: https://github.com/BrandonZacharie/node-redis-server/compare/1.1.0...HEAD
+[Unreleased]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.0...HEAD
+[1.2.0]: https://github.com/BrandonZacharie/node-redis-server/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/BrandonZacharie/node-redis-server/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/BrandonZacharie/node-redis-server/compare/0.4.0...1.0.0
 [0.4.0]: https://github.com/BrandonZacharie/node-redis-server/compare/0.3.0...0.4.0
