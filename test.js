@@ -114,7 +114,7 @@ const expectToClose = (server, done) => {
  * @return {undefined}
  */
 const parsePort = (server, callback) => {
-  const portRegExp = /port:\s+\d+/ig;
+  const portRegExp = /port(:|=)\s*\d+/ig;
 
   /**
    * A listener for stdout of the current server. Invokes {@linkcode callback}
