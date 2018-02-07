@@ -32,7 +32,7 @@ const server = new RedisServer(6379);
 server.open((err) => {
   if (err === null) {
     // You may now connect a client to the Redis
-    // server bound to `server.port` (e.g. 6379).
+    // server bound to port 6379.
   }
 });
 
@@ -42,10 +42,10 @@ server.open((err) => {
 
 | Property | Type   | Default      | Description
 |:---------|:-------|:-------------|:-----------
-| bin      | String | redis-server | A path to a Redis server binary.
-| conf     | String |              | A path to a Redis server configuration file.
-| port     | Number | 6379         | A port to bind a server to.
-| slaveof  | String |              | An address of a server to sync with.
+| bin      | String | redis-server | A Redis server binary path.
+| conf     | String |              | A Redis server configuration file path.
+| port     | Number | 6379         | A port to bind a Redis server to.
+| slaveof  | String |              | An address of a Redis server to sync with.
 
 A Redis server binary must be available. If you do not have one in $PATH,
 provide a path in configuration.

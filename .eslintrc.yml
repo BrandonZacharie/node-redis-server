@@ -27,8 +27,12 @@ rules:
   - error
   handle-callback-err:
   - error
+  comma-style:
+  - error
+  - last
   comma-dangle:
   - error
+  - never
   yoda:
   - error
   no-trailing-spaces:
@@ -63,6 +67,8 @@ rules:
   - ignoreChainWithDepth: 2
   newline-before-return:
   - error
+  prefer-promise-reject-errors:
+  - error
   require-jsdoc:
   - error
   - require:
@@ -84,3 +90,6 @@ rules:
       number: Number
     requireParamDescription: false
     requireReturnDescription: false
+  lines-between-class-members:
+  - error
+  - always

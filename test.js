@@ -12,6 +12,18 @@ const describe = mocha.describe;
 const it = mocha.it;
 
 /**
+ * Create a Redis configuration file for a given object.
+ * @argument {Object} dict
+ * @argument {String} name
+ * @return {Promise}
+ */
+const createConf = (dict, name) => {
+  let data = Object.keys(dict).reduce((s, k) => s += `${k} ${dict[k]}\n`, '');
+
+  return promisify((done) => fs.writeFile(name, data, done));
+};
+
+/**
  * Get a random port number.
  * @return {Number}
  */
@@ -102,7 +114,7 @@ const expectToClose = (server, done) => {
  * @return {undefined}
  */
 const parsePort = (server, callback) => {
-  const portRegExp = /port:\s+\d+/ig;
+  const portRegExp = /port(:|=)\s*\d+/ig;
 
   /**
    * A listener for stdout of the current server. Invokes {@linkcode callback}
@@ -116,7 +128,13 @@ const parsePort = (server, callback) => {
     if (matches !== null) {
       server.removeListener('stdout', listener);
 
-      return callback(Number(matches[0].split(':').pop()));
+      const value = matches[0]
+        .split(':')
+        .pop()
+        .split('=')
+        .pop();
+
+      return callback(Number(value));
     }
   };
 
@@ -125,14 +143,18 @@ const parsePort = (server, callback) => {
 
 describe('RedisServer', () => {
   let bin = null;
-  const conf = `./${new Date().toISOString()}.conf`;
+  const conf = `${new Date().toISOString()}.conf`;
   const port = generateRandomPort();
-  const slaveof = `::1 ${port}`;
+  const slaveof = `127.0.0.1 ${port}`;
+  const bind = '127.0.0.1';
 
+  before(() => Promise.all([
+    promisify((done) => childprocess.exec('rm -rf *.rdb', done)),
+    promisify((done) => childprocess.exec('rm -rf *.log', done)),
+    promisify((done) => childprocess.exec('rm -rf *.conf', done))
+  ]));
   before((done) => {
-    childprocess.exec('pkill redis-server', () => {
-      done();
-    });
+    childprocess.exec('pkill redis-server', () => done());
   });
   before((done) => {
     childprocess.exec('which redis-server', (err, stdout) => {
@@ -141,28 +163,20 @@ describe('RedisServer', () => {
       done(err);
     });
   });
-  before((done) => {
-    fs.writeFile(conf, `port ${port}\nbind ::1 127.0.0.1`, done);
-  });
+  before(() => createConf({ port, bind }, conf));
   after((done) => {
     fs.unlink(conf, done);
   });
   describe('.parseConfig()', () => {
-    it('should parse bin, port, and slaveof', () => {
+    it('parses valid properties only', () => {
       const expectedObject = { bin, port, slaveof };
-      const expectedKeys = Object.keys(expectedObject).sort();
+      const actualObject = RedisServer.parseConfig(
+        Object.assign({ fu: 'bar' }, expectedObject)
+      );
 
-      expectedObject.foo = 'bar';
-
-      const actualObject = RedisServer.parseConfig(expectedObject);
-
-      for (let key of expectedKeys) {
-        expect(actualObject).to.have.property(key).equal(expectedObject[key]);
-      }
-
-      expect(Object.keys(actualObject).sort()).to.eql(expectedKeys);
+      expect(actualObject).to.eql(expectedObject);
     });
-    it('should parse bin and conf only', () => {
+    it('parses bin and conf only when conf is given', () => {
       const expectedObject = { bin, conf, port, slaveof };
       const actualObject = RedisServer.parseConfig(expectedObject);
 
@@ -170,7 +184,7 @@ describe('RedisServer', () => {
       expect(actualObject).to.have.property('conf').equal(expectedObject.conf);
       expect(Object.keys(actualObject)).to.have.length(2);
     });
-    it('should work without arguments', () => {
+    it('works without arguments', () => {
       expect(RedisServer.parseConfig()).to.be.an('object');
       expect(RedisServer.parseConfig(null)).to.be.an('object');
       expect(RedisServer.parseConfig({ port: null })).to.be.an('object');
@@ -185,7 +199,7 @@ describe('RedisServer', () => {
       const port = 1234;
       const config = RedisServer.parseConfig(port);
 
-      expect(config).to.have.property('port').equal(port);
+      expect(config).to.be.an('object').and.have.property('port').equal(port);
     });
     it('accepts a configuration object', () => {
       const expectedObject = { bin, port, slaveof };
@@ -195,10 +209,10 @@ describe('RedisServer', () => {
     });
   });
   describe('.parseFlags()', () => {
-    it('should return an empty array when given an empty object', () => {
+    it('returns an empty array when given an empty object', () => {
       expect(RedisServer.parseFlags({})).to.have.length(0);
     });
-    it('should return port, and slaveof', () => {
+    it('parses all flags', () => {
       const config = { bin, port, slaveof };
       const actualFlags = RedisServer.parseFlags(config);
       const expectedFlags = [
@@ -208,7 +222,7 @@ describe('RedisServer', () => {
 
       expect(actualFlags).to.eql(expectedFlags);
     });
-    it('should return conf', () => {
+    it('returns only conf when present', () => {
       const config = { bin, conf, port, slaveof };
 
       expect(RedisServer.parseFlags(config)).to.eql([config.conf]);
@@ -216,46 +230,63 @@ describe('RedisServer', () => {
   });
   describe('.parseData()', () => {
     it('parses a "ready to accept connections" message', () => {
-      const string = '25683:M 06 Jan 11:53:05.426 * The server is now ready \
-      to accept connections on port 6379';
+      const messages = [
+        '25683:M 06 Jan 11:53:05.426 * The server is now ready \
+        to accept connections on port 6379',
+        '3792:M 07 Feb 01:14:17.079 * Ready to accept connections'
+      ];
 
-      expect(RedisServer.parseData(string))
-      .to.have.property('err').equal(null);
+      for (let message of messages) {
+        const result = RedisServer.parseData(message);
+
+        expect(result).to.be.an('object').and.have.property('err');
+        expect(result.err).to.equal(null);
+      }
     });
     it('parses a "Address already in use" error', () => {
-      const string = '26513:M 06 Jan 11:59:10.308 # Creating Server TCP \
-      listening socket *:6379: bind: Address already in use';
+      const result = RedisServer.parseData(
+        '26513:M 06 Jan 11:59:10.308 # Creating Server TCP \
+        listening socket *:6379: bind: Address already in use'
+      );
 
-      expect(RedisServer.parseData(string))
-      .to.have.property('err').be.an('error').with.property('code').equal(-1);
+      expect(result).to.be.an('object').and.have.property('err');
+      expect(result.err).be.an('error').with.property('code').equal(-1);
     });
     it('parses a "Permission denied" error', () => {
-      const string = '26637:M 06 Jan 12:09:39.470 # Creating Server TCP \
-      listening socket *:1: bind: Permission denied';
+      const result = RedisServer.parseData(
+        '26637:M 06 Jan 12:09:39.470 # Creating Server TCP \
+        listening socket *:1: bind: Permission denied'
+      );
 
-      expect(RedisServer.parseData(string))
-      .to.have.property('err').be.an('error').with.property('code').equal(-2);
+      expect(result).to.be.an('object').and.have.property('err');
+      expect(result.err).be.an('error').with.property('code').equal(-2);
     });
     it('parses a "Configured to not listen" error', () => {
-      const string = '26559:M 06 Jan 12:05:09.961 # Configured to not listen \
-      anywhere, exiting.';
+      const result = RedisServer.parseData(
+        '26559:M 06 Jan 12:05:09.961 # Configured to not listen \
+        anywhere, exiting.'
+      );
 
-      expect(RedisServer.parseData(string))
-      .to.have.property('err').be.an('error').with.property('code').equal(-3);
+      expect(result).to.be.an('object').and.have.property('err');
+      expect(result.err).be.an('error').with.property('code').equal(-3);
     });
     it('parses a "Fatal" error', () => {
-      const string = '26939:C 06 Jan 12:15:11.241 # Fatal error, can\'t open \
-      config file \'node_databases\'';
+      const result = RedisServer.parseData(
+        '26939:C 06 Jan 12:15:11.241 # Fatal error, can\'t open \
+        config file \'node_databases\''
+      );
 
-      expect(RedisServer.parseData(string))
-      .to.have.property('err').be.an('error').with.property('code').equal(-4);
+      expect(result).to.be.an('object').and.have.property('err');
+      expect(result.err).be.an('error').with.property('code').equal(-3);
     });
     it('parses a "Unrecoverable" error', () => {
-      const string = '27785:M 06 Jan 12:45:17.671 # Short read or OOM loading \
-      DB. Unrecoverable error, aborting now.';
+      const result = RedisServer.parseData(
+        '27785:M 06 Jan 12:45:17.671 # Short read or OOM loading \
+        DB. Unrecoverable error, aborting now.'
+      );
 
-      expect(RedisServer.parseData(string))
-      .to.have.property('err').be.an('error').with.property('code').equal(-4);
+      expect(result).to.be.an('object').and.have.property('err');
+      expect(result.err).be.an('error').with.property('code').equal(-3);
     });
     it('returns `null` when given an unrecognized value', () => {
       const values = ['invalid', '', null, undefined, {}, 1234];
@@ -295,24 +326,23 @@ describe('RedisServer', () => {
     });
   });
   describe('#open()', () => {
-    it('should start a server and execute a callback', (done) => {
+    it('should start a server and execute a callback', () => {
       const server = new RedisServer(generateRandomPort());
 
-      expectToOpen(server, (err, res) => {
-        expect(err, 'err').to.equal(null);
-        expect(res, 'res').to.equal(null);
+      return expectToOpen(server, (err, res) => {
+        expect(err).to.equal(null);
+        expect(res).to.equal(null);
         expectRunning(server);
-        server.close(done);
-      })
-      .catch(done);
+
+        return server.close();
+      });
     });
-    it('should pass an error and null result to a callback on failure', (done) => {
+    it('should pass proper arguments to a callback on failure', () => {
       const server = new RedisServer('badport');
 
-      server.open((err, res) => {
+      return server.open((err, res) => {
         expect(err).to.be.an('error');
         expect(res).to.equal(null);
-        done();
       });
     });
     it('should start a server and resolve a promise', () => {
@@ -327,70 +357,110 @@ describe('RedisServer', () => {
     });
     it('should do nothing when a server is already starting', () => {
       const server = new RedisServer(generateRandomPort());
+      let openingCount = 0;
+      let openCount = 0;
 
-      expect(server.open()).to.equal(server.open());
+      server.on('opening', () => ++openingCount);
+      server.on('open', () => ++openCount);
 
-      return server.close();
+      const expectedPromise = server.open();
+      const actualPromise = server.open();
+
+      return Promise
+        .all([
+          expectedPromise,
+          actualPromise
+        ])
+        .then(() => {
+          expect(actualPromise).to.equal(expectedPromise);
+          expect(openingCount).to.equal(1);
+          expect(openCount).to.equal(1);
+
+          return server.close();
+        });
     });
     it('should do nothing when a server is already started', () => {
       const server = new RedisServer(generateRandomPort());
+      let openingCount = 0;
+      let openCount = 0;
 
-      return server.open().then(() => {
-        server.open();
-        expectRunning(server);
+      server.on('opening', () => ++openingCount);
+      server.on('open', () => ++openCount);
 
-        return server.close();
-      });
+      return server
+        .open()
+        .then(() => server.open())
+        .then(() => {
+          expectRunning(server);
+          expect(openingCount).to.equal(1);
+          expect(openCount).to.equal(1);
+
+          return server.close();
+        });
     });
-    it('should fail to start a server with a bad port', (done) => {
+    it('should fail to start a server with a bad port', () => {
       const server = new RedisServer({ port: 'fubar' });
 
-      server.open((err) => {
-        expect(err).to.be.an('error');
-        done();
-      })
-      .catch(done);
+      return server.open((err) => {
+        expect(err).to.be.an('error').to.have.property('code').equal(-3);
+      });
     });
     it('should fail to start a server with a privileged port', (done) => {
       const server = new RedisServer({ port: 1 });
 
-      server.open((err) => {
-        expect(err).to.be.an('error');
-        done();
-      })
-      .catch(done);
+      server
+        .open((err) => {
+          expect(err).to.be.an('error');
+          done();
+        })
+        .catch(done);
     });
-    it('should fail to start a server on an in-use port', (done) => {
+    it('should fail to start a server on an in-use port', () => {
       const port = generateRandomPort();
       const server1 = new RedisServer(port);
       const server2 = new RedisServer(port);
 
-      server1.open(() => {
-        server2.open((err) => {
-          expect(err).to.be.an('error');
-          server1.close(done);
-        })
-        .catch(done);
-      });
+      return server1
+        .open()
+        .then(() => server2.open((err) => {
+          expect(err).to.be.an('error').and.have.property('code').equal(-1);
+
+          return server1.close();
+        }));
     });
     it('should start a server with a given slaveof address', () => {
       const server1 = new RedisServer(port);
       const server2 = new RedisServer({ port: generateRandomPort(), slaveof });
-      let isSlaveOf = false;
+      const promise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Timeout')), 1000);
+        /**
+         * A listener for the 'MASTER <-> SLAVE sync started' message from
+         * the stdout of {@linkcode server2} that resolves the current
+         * {@link Promise} when found.
+         * @argument {String} value
+         * @return {undefined}
+         */
+        const listener = (value) => {
+          if (value.indexOf('MASTER <-> SLAVE sync started') !== -1) {
+            clearTimeout(timeout);
+            server2.removeListener('stdout', listener);
+            resolve(null);
+          }
+        };
 
-      server2.on('stdout', (value) => {
-        if (value.indexOf('MASTER <-> SLAVE sync started') !== -1) {
-          isSlaveOf = true;
-        }
+        server2.on('stdout', listener);
       });
 
-      return server1.open()
-      .then(() => expectToOpen(server2))
-      .then(() => new Promise((resolve) => setTimeout(resolve, 10)))
-      .then(() => Promise.all([server2.close(), server1.close()]))
-      .then(() => {
-        expect(isSlaveOf).to.equal(true);
-      });
+      return Promise
+        .all([
+          server1.open(),
+          server2.open(),
+          promise
+        ])
+        .then(() => Promise.all([
+          server2.close(),
+          server1.close()
+        ]));
     });
     it('should start a server with a given port', () => {
       const expectedPort = generateRandomPort();
@@ -417,6 +487,17 @@ describe('RedisServer', () => {
         return server.close();
       });
     });
+    it('fails to start a server with a bad "dir" line Redis conf', () => {
+      const port = generateRandomPort();
+      const conf = `${port}.conf`;
+      const server = new RedisServer({ conf });
+
+      return createConf({ port, bind, dir: 'bad/dir/path' }, conf)
+        .then(() => server.open((err) => {
+          expect(err).to.be.an('error').to.have.property('code').equal(-3);
+        }))
+        .then(() => server.close());
+    });
     it('should start a server with a given Redis binary', () => {
       const server = new RedisServer({ bin, port });
 
@@ -426,18 +507,18 @@ describe('RedisServer', () => {
       const server = new RedisServer(generateRandomPort());
 
       return Promise
-      .all([
-        server.open(),
-        promisify((done) => setTimeout(() => server.close(done), 10)),
-        promisify((done) => setTimeout(() => server.open(done), 15)),
-        promisify((done) => setTimeout(() => server.close(done), 20)),
-        promisify((done) => setTimeout(() => server.open(done), 25))
-      ])
-      .then(() => {
-        expectRunning(server);
+        .all([
+          server.open(),
+          promisify((done) => setTimeout(() => server.close(done), 10)),
+          promisify((done) => setTimeout(() => server.open(done), 15)),
+          promisify((done) => setTimeout(() => server.close(done), 20)),
+          promisify((done) => setTimeout(() => server.open(done), 25))
+        ])
+        .then(() => {
+          expectRunning(server);
 
-        return server.close();
-      });
+          return server.close();
+        });
     });
     it('should start a server while others run on different ports', () => {
       const server1 = new RedisServer(generateRandomPort());
@@ -445,22 +526,21 @@ describe('RedisServer', () => {
       const server3 = new RedisServer(generateRandomPort());
 
       return Promise
-      .all([
-        server1.open(),
-        server2.open(),
-        server3.open()
-      ])
-      .then(() => {
-        expectRunning(server1);
-        expectRunning(server2);
-        expectRunning(server3);
-
-        return Promise.all([
+        .all([
+          server1.open(),
+          server2.open(),
+          server3.open()
+        ])
+        .then(() => {
+          expectRunning(server1);
+          expectRunning(server2);
+          expectRunning(server3);
+        })
+        .then(() => Promise.all([
           server1.close(),
           server2.close(),
           server3.close()
-        ]);
-      });
+        ]));
     });
     it('emits "opening" and "open" when starting a server', () => {
       const server = new RedisServer(generateRandomPort());
@@ -470,15 +550,16 @@ describe('RedisServer', () => {
       server.on('opening', () => ++openingCount);
       server.on('open', () => ++openCount);
 
-      return server.open()
-      .then(() => server.close())
-      .then(() => server.open())
-      .then(() => server.open())
-      .then(() => server.close())
-      .then(() => {
-        expect(openingCount).to.equal(2);
-        expect(openCount).to.equal(2);
-      });
+      return server
+        .open()
+        .then(() => server.close())
+        .then(() => server.open())
+        .then(() => server.open())
+        .then(() => server.close())
+        .then(() => {
+          expect(openingCount).to.equal(2);
+          expect(openCount).to.equal(2);
+        });
     });
     it('emits "closing" and "close" when failing to start a server', () => {
       const server = new RedisServer('badport');
@@ -488,38 +569,28 @@ describe('RedisServer', () => {
       server.on('closing', () => ++closingCount);
       server.on('close', () => ++closeCount);
 
-      return server.open()
-      .then(() => {
-        throw new Error('Expected an error');
-      })
-      .catch((err) => {
-        expect(err).to.have.property('code').equal(-3);
+      return server
+        .open((err) => {
+          expect(err).to.be.an('error').and.have.property('code').equal(-3);
+        })
+        .then(() => server.open((err) => {
+          expect(err).to.be.an('error').and.have.property('code').equal(-3);
+        }))
+        .then(() => {
+          expect(closingCount).to.equal(2);
+          expect(closeCount).to.equal(2);
 
-        return server.open();
-      })
-      .then(() => {
-        throw new Error('Expected an error');
-      })
-      .catch((err) => {
-        expect(err).to.have.property('code').equal(-3);
-        expect(closingCount).to.equal(2);
-        expect(closeCount).to.equal(2);
-
-        return server.close();
-      });
+          return server.close();
+        });
     });
   });
   describe('#close()', () => {
-    it('should close a server and execute a callback', (done) => {
+    it('should close a server and execute a callback', () => {
       const server = new RedisServer(generateRandomPort());
 
-      server.open((err) => {
-        expect(err).to.equal(null);
-        expectToClose(server, (err) => {
-          expect(err).to.equal(null);
-          done();
-        });
-      });
+      return server
+        .open()
+        .then(() => promisify((done) => expectToClose(server, done)));
     });
     it('should close a server and resolve a promise', () => {
       const server = new RedisServer(generateRandomPort());
@@ -533,14 +604,16 @@ describe('RedisServer', () => {
       RedisServer.close = () =>
         Promise.reject(new Error());
 
-      return server.open(() => {
-        return server.close((err, res) => {
+      return server
+        .open()
+        .then(() => server.close((err, res) => {
           RedisServer.close = close;
 
           expect(err).to.be.an('error');
           expect(res).to.equal(null);
-        });
-      });
+
+          return server.close();
+        }));
     });
     it('should do nothing when a server is already stopping', () => {
       const server = new RedisServer(generateRandomPort());
@@ -554,13 +627,14 @@ describe('RedisServer', () => {
     it('should do nothing when a server is already stopped', () => {
       const server = new RedisServer(generateRandomPort());
 
-      return server.open()
-      .then(() => server.close())
-      .then(() => {
-        server.close();
-        expect(server.isClosing).to.equal(false);
-        expectIdle(server);
-      });
+      return server
+        .open()
+        .then(() => server.close())
+        .then(() => {
+          server.close();
+          expect(server.isClosing).to.equal(false);
+          expectIdle(server);
+        });
     });
     it('should do nothing when a server was never started', () => {
       const server = new RedisServer();
@@ -573,15 +647,15 @@ describe('RedisServer', () => {
       const server = new RedisServer(generateRandomPort());
 
       return Promise
-      .all([
-        server.open(),
-        promisify((done) => setTimeout(() => server.close(done), 10)),
-        promisify((done) => setTimeout(() => server.open(done), 15)),
-        promisify((done) => setTimeout(() => server.close(done), 20))
-      ])
-      .then(() => {
-        expectIdle(server);
-      });
+        .all([
+          server.open(),
+          promisify((done) => setTimeout(() => server.close(done), 10)),
+          promisify((done) => setTimeout(() => server.open(done), 15)),
+          promisify((done) => setTimeout(() => server.close(done), 20))
+        ])
+        .then(() => {
+          expectIdle(server);
+        });
     });
     it('emits "closing" and "close" when stopping a server', () => {
       const server = new RedisServer(generateRandomPort());
@@ -591,15 +665,16 @@ describe('RedisServer', () => {
       server.on('closing', () => ++closingCount);
       server.on('close', () => ++closeCount);
 
-      return server.open()
-      .then(() => server.close())
-      .then(() => server.open())
-      .then(() => server.close())
-      .then(() => server.close())
-      .then(() => {
-        expect(closingCount).to.equal(2);
-        expect(closeCount).to.equal(2);
-      });
+      return server
+        .open()
+        .then(() => server.close())
+        .then(() => server.open())
+        .then(() => server.close())
+        .then(() => server.close())
+        .then(() => {
+          expect(closingCount).to.equal(2);
+          expect(closeCount).to.equal(2);
+        });
     });
   });
   describe('#isOpening', () => {
@@ -610,17 +685,18 @@ describe('RedisServer', () => {
       server.open();
       expect(server.isOpening).to.equal(true);
 
-      return server.open()
-      .then(() => {
-        expect(server.isOpening).to.equal(false);
-        server.close();
-        expect(server.isOpening).to.equal(false);
+      return server
+        .open()
+        .then(() => {
+          expect(server.isOpening).to.equal(false);
+          server.close();
+          expect(server.isOpening).to.equal(false);
 
-        return server.close();
-      })
-      .then(() => {
-        expect(server.isOpening).to.equal(false);
-      });
+          return server.close();
+        })
+        .then(() => {
+          expect(server.isOpening).to.equal(false);
+        });
     });
     it('is `true` while a misconfigured server is starting', () => {
       const server = new RedisServer('badport');
@@ -629,20 +705,18 @@ describe('RedisServer', () => {
       server.open();
       expect(server.isOpening).to.equal(true);
 
-      return server.open()
-      .then(() => {
-        throw new Error('Expected an error');
-      })
-      .catch(() => {
-        expect(server.isOpening).to.equal(false);
-        server.close();
-        expect(server.isOpening).to.equal(false);
+      return server
+        .open((err) => {
+          expect(err).to.be.an('error').and.have.property('code').equal(-3);
+          expect(server.isOpening).to.equal(false);
+          server.close();
+          expect(server.isOpening).to.equal(false);
 
-        return server.close();
-      })
-      .then(() => {
-        expect(server.isOpening).to.equal(false);
-      });
+          return server.close();
+        })
+        .then(() => {
+          expect(server.isOpening).to.equal(false);
+        });
     });
   });
   describe('#isClosing', () => {
@@ -653,17 +727,18 @@ describe('RedisServer', () => {
       server.open();
       expect(server.isClosing).to.equal(false);
 
-      return server.open()
-      .then(() => {
-        expect(server.isClosing).to.equal(false);
-        server.close();
-        expect(server.isClosing).to.equal(true);
+      return server
+        .open()
+        .then(() => {
+          expect(server.isClosing).to.equal(false);
+          server.close();
+          expect(server.isClosing).to.equal(true);
 
-        return server.close();
-      })
-      .then(() => {
-        expect(server.isClosing).to.equal(false);
-      });
+          return server.close();
+        })
+        .then(() => {
+          expect(server.isClosing).to.equal(false);
+        });
     });
     it('is `true` when a server fails to start', () => {
       const server = new RedisServer('badport');
@@ -674,22 +749,19 @@ describe('RedisServer', () => {
       server.open();
       expect(server.isClosing).to.equal(false);
 
-      return server.open()
-      .then(() => {
-        throw new Error('Expected an error');
-      })
-      .catch((err) => {
-        expect(err).to.have.property('code').equal(-3);
-        expect(server.isClosing).to.equal(false);
-        expect(isClosing).to.equal(true);
-        server.close();
-        expect(server.isClosing).to.equal(false);
+      return server
+        .open((err) => {
+          expect(err).to.be.an('error').and.have.property('code').equal(-3);
+          expect(server.isClosing).to.equal(false);
+          expect(isClosing).to.equal(true);
+          server.close();
+          expect(server.isClosing).to.equal(false);
 
-        return server.close();
-      })
-      .then(() => {
-        expect(server.isClosing).to.equal(false);
-      });
+          return server.close();
+        })
+        .then(() => {
+          expect(server.isClosing).to.equal(false);
+        });
     });
   });
   describe('#isRunning', () => {
@@ -700,17 +772,18 @@ describe('RedisServer', () => {
       server.open();
       expect(server.isRunning).to.equal(false);
 
-      return server.open()
-      .then(() => {
-        expect(server.isRunning).to.equal(true);
-        server.close();
-        expect(server.isRunning).to.equal(true);
+      return server
+        .open()
+        .then(() => {
+          expect(server.isRunning).to.equal(true);
+          server.close();
+          expect(server.isRunning).to.equal(true);
 
-        return server.close();
-      })
-      .then(() => {
-        expect(server.isRunning).to.equal(false);
-      });
+          return server.close();
+        })
+        .then(() => {
+          expect(server.isRunning).to.equal(false);
+        });
     });
     it('is `false` after a misconfigured server starts', () => {
       const server = new RedisServer('badport');
@@ -719,20 +792,18 @@ describe('RedisServer', () => {
       server.open();
       expect(server.isRunning).to.equal(false);
 
-      return server.open()
-      .then(() => {
-        throw new Error('Expected an error');
-      })
-      .catch(() => {
-        expect(server.isRunning).to.equal(false);
-        server.close();
-        expect(server.isRunning).to.equal(false);
+      return server
+        .open((err) => {
+          expect(err).to.be.an('error').and.have.property('code').equal(-3);
+          expect(server.isRunning).to.equal(false);
+          server.close();
+          expect(server.isRunning).to.equal(false);
 
-        return server.close();
-      })
-      .then(() => {
-        expect(server.isRunning).to.equal(false);
-      });
+          return server.close();
+        })
+        .then(() => {
+          expect(server.isRunning).to.equal(false);
+        });
     });
   });
 });

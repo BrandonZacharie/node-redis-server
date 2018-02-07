@@ -44,8 +44,8 @@ const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
 const regExp = {
-  terminalMessage: /now\sready|already\sin\suse|not\slisten|error|denied/im,
-  errorMessage: /#\s+(.*error.*)/im,
+  terminalMessage: /ready\s+to\s+accept|already\s+in\s+use|not\s+listen|error|denied|can't/im,
+  errorMessage: /#\s+(.*error|can't.*)/im,
   singleWhiteSpace: /\s/g,
   multipleWhiteSpace: /\s\s+/g
 };
@@ -140,13 +140,13 @@ class RedisServer extends events.EventEmitter {
     const result = {
       err: null,
       key: matches
-      .pop()
-      .replace(regExp.singleWhiteSpace, '')
-      .toLowerCase()
+        .pop()
+        .replace(regExp.singleWhiteSpace, '')
+        .toLowerCase()
     };
 
     switch (result.key) {
-      case 'nowready':
+      case 'readytoaccept':
         break;
 
       case 'alreadyinuse':
@@ -167,14 +167,15 @@ class RedisServer extends events.EventEmitter {
 
         break;
 
+      case 'can\'t':
       case 'error':
         result.err = new Error(
           regExp.errorMessage
-          .exec(string)
-          .pop()
-          .replace(regExp.multipleWhiteSpace, ' ')
+            .exec(string)
+            .pop()
+            .replace(regExp.multipleWhiteSpace, ' ')
         );
-        result.err.code = -4;
+        result.err.code = -3;
 
         break;
     }
@@ -183,7 +184,7 @@ class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Start a given {@link RedisServer}.
+   * Start a given {@linkcode server}.
    * @protected
    * @fires RedisServer#stdout
    * @fires RedisServer#opening
@@ -276,7 +277,7 @@ class RedisServer extends events.EventEmitter {
   }
 
   /**
-   * Stop a given {@link RedisServer}.
+   * Stop a given {@linkcode server}.
    * @protected
    * @fires RedisServer#closing
    * @argument {RedisServer} server
@@ -390,11 +391,13 @@ class RedisServer extends events.EventEmitter {
   open(callback) {
     const promise = RedisServer.open(this);
 
-    return typeof callback === 'function'
-    ? promise
-      .then((v) => callback(null, v))
-      .catch((e) => callback(e, null))
-    : promise;
+    if (typeof callback === 'function') {
+      return promise
+        .then((v) => callback(null, v))
+        .catch((e) => callback(e, null));
+    }
+
+    return promise;
   }
 
   /**
@@ -405,11 +408,13 @@ class RedisServer extends events.EventEmitter {
   close(callback) {
     const promise = RedisServer.close(this);
 
-    return typeof callback === 'function'
-    ? promise
-      .then((v) => callback(null, v))
-      .catch((e) => callback(e, null))
-    : promise;
+    if (typeof callback === 'function') {
+      return promise
+        .then((v) => callback(null, v))
+        .catch((e) => callback(e, null));
+    }
+
+    return promise;
   }
 }
 

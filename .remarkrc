@@ -1,0 +1,8 @@
+{
+  "presets": ["lint-recommended"],
+  "plugins": {
+    "lint": {
+      "list-item-indent": false
+    }
+  }
+}
