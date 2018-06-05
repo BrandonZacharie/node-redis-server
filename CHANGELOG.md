@@ -6,6 +6,18 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ---
 
+### [Unreleased][]
+
+#### Changed
+
+- Update dev dependencies
+  - coveralls 3.0.1
+  - eslint 4.19.1
+  - mocha 5.2.0
+  - nyc 12.0.2
+  - remark-lint 6.0.2
+  - remark-preset-lint-recommended 3.0.2
+
 ### [1.2.0][] — 2018-02-07
 
 #### Added
