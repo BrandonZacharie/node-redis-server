@@ -25,6 +25,8 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 #### Fixed
 
 - npm audit found 15 vulnerabilities (4 low, 9 moderate, 2 high)
+- `#open()` returning a rejected promise due to a "Server can't set maximum
+open files" error
 
 ### [1.2.0][] — 2018-02-07
 
