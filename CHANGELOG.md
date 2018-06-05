@@ -18,6 +18,10 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
   - remark-lint 6.0.2
   - remark-preset-lint-recommended 3.0.2
 
+#### Fixed
+
+- npm audit found 15 vulnerabilities (4 low, 9 moderate, 2 high)
+
 ### [1.2.0][] — 2018-02-07
 
 #### Added
