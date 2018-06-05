@@ -6,7 +6,7 @@ node_js:
 - '6'
 - '8.0'
 - '8'
-- '9'
+- '10'
 sudo: false
 script:
 - npm run lint
