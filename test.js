@@ -295,14 +295,6 @@ describe('RedisServer', () => {
         expect(RedisServer.parseData(value)).to.equal(null);
       }
     });
-    it('does not parse a "Server can\'t set maximum open files" error', () => {
-      const result = RedisServer.parseData(
-        '3105:M 30 May 17:46:28.529 # Server can\'t set maximum open \
-        files to 10032 because of OS error: Operation not permitted.'
-      );
-
-      expect(result).to.equal(null);
-    });
   });
   describe('#constructor()', () => {
     it('constructs a new instance', () => {

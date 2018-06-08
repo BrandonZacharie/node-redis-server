@@ -45,7 +45,6 @@ const events = require('events');
 const PromiseQueue = require('promise-queue');
 const regExp = {
   terminalMessage: /ready\s+to\s+accept|already\s+in\s+use|not\s+listen|error|denied|can't/im,
-  warningMessage: /can't\s+set\s+maximum\s+open\s+files/im,
   errorMessage: /#\s+(.*error|can't.*)/im,
   singleWhiteSpace: /\s/g,
   multipleWhiteSpace: /\s\s+/g
@@ -134,7 +133,7 @@ class RedisServer extends events.EventEmitter {
   static parseData(string) {
     const matches = regExp.terminalMessage.exec(string);
 
-    if (matches === null || regExp.warningMessage.test(string)) {
+    if (matches === null) {
       return null;
     }
 
