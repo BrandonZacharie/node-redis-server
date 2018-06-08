@@ -295,6 +295,44 @@ describe('RedisServer', () => {
         expect(RedisServer.parseData(value)).to.equal(null);
       }
     });
+    it('ignores errors when Redis starts successfully', () => {
+      const result = RedisServer.parseData(
+        '5443:C 07 Jun 08:14:15.149 # oO0OoO0OoO0Oo Redis is \
+        starting oO0OoO0OoO0Oo \
+        5443: C 07 Jun 08: 14: 15.149 # Redis version = 4.0.9, \
+        bits = 64, commit = 00000000, modified = 0, pid = 5443, just started \
+        5443: C 07 Jun 08: 14: 15.149 # Configuration loaded \
+        5443: M 07 Jun 08: 14: 15.149 # You requested maxclients of 10000 \
+        requiring at least 10032 max file descriptors. \
+        5443: M 07 Jun 08: 14: 15.149 # Server can\'t set maximum open files \
+        to 10032 because of OS error: Operation not permitted. \
+        5443: M 07 Jun 08: 14: 15.149 # Current maximum open files is 4096. \
+        maxclients has been reduced to 4064 to compensate for low ulimit. \
+        If you need higher maxclients increase \'ulimit -n\'. \
+        5443: M 07 Jun 08: 14: 15.149 * Running mode = standalone, \
+        port = 6381. \
+        5443: M 07 Jun 08: 14: 15.149 # WARNING: The TCP backlog setting of \
+        511 cannot be enforced because / proc / sys / net / core / somaxconn \
+        is set to the lower value of 128. \
+        5443: M 07 Jun 08: 14: 15.149 # Server initialized \
+        5443: M 07 Jun 08: 14: 15.149 # WARNING overcommit_memory is set to 0! \
+        Background save may fail under low memory condition.To fix this issue \
+        add \'vm.overcommit_memory = 1\' to / etc / sysctl.conf and then \
+        reboot or run the command \'sysctl vm.overcommit_memory=1\' for this \
+        to take effect. \
+        5443: M 07 Jun 08: 14: 15.149 # WARNING you have Transparent Huge \
+        Pages(THP) support enabled in your kernel.This will create latency \
+        and memory usage issues with Redis.To fix this issue run the \
+        command \'echo never > /sys/kernel/mm/transparent_hugepage/enabled\' \
+        as root, and add it to your / etc / rc.local in order to retain the \
+        setting after a reboot.Redis must be restarted after THP is disabled. \
+        5443: M 07 Jun 08: 14: 15.149 * Ready to accept connections'
+      );
+
+      expect(result).to.be.an('object');
+      expect(result).to.have.property('err').equal(null);
+      expect(result).to.have.property('key').equal('readytoaccept');
+    });
   });
   describe('#constructor()', () => {
     it('constructs a new instance', () => {

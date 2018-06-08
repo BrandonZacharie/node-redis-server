@@ -6,6 +6,30 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ---
 
+### [Unreleased][]
+
+### [1.2.1][] — 2018-06-07
+
+#### Changed
+
+- Update dev dependencies
+  - coveralls 3.0.1
+  - eslint 4.19.1
+  - mocha 5.2.0
+  - nyc 12.0.2
+  - remark-lint 6.0.2
+  - remark-preset-lint-recommended 3.0.2
+
+#### Deprecated
+
+- Support for Node.js versions not designated as LTS
+
+#### Fixed
+
+- npm audit found 15 vulnerabilities (4 low, 9 moderate, 2 high)
+- `#open()` returning a rejected promise due to a "Server can't set maximum
+  open files" error
+
 ### [1.2.0][] — 2018-02-07
 
 #### Added
@@ -31,8 +55,8 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 #### Fixed
 
 - `UnhandledPromiseRejectionWarning` errors appear when some tests fail
--  `#open()` returning an unresolved promise due to "Can't chdir to '...': No
-such file or directory" errors
+- `#open()` returning an unresolved promise due to "Can't chdir to '...': No
+  such file or directory" errors
 
 ---
 
@@ -51,7 +75,7 @@ such file or directory" errors
 #### Fixed
 
 - `#isClosing` not set to `true` when a server is closing due to a
-start-up error
+  start-up error
 
 ---
 
@@ -151,7 +175,8 @@ start-up error
 
 - Initial release
 
-[Unreleased]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.1...HEAD
+[1.2.1]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/BrandonZacharie/node-redis-server/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/BrandonZacharie/node-redis-server/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/BrandonZacharie/node-redis-server/compare/0.4.0...1.0.0

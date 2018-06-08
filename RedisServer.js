@@ -44,7 +44,10 @@ const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
 const regExp = {
-  terminalMessage: /ready\s+to\s+accept|already\s+in\s+use|not\s+listen|error|denied|can't/im,
+  terminalMessages: [
+    /ready\s+to\s+accept/im,
+    /already\s+in\s+use|not\s+listen|error|denied|can't/im
+  ],
   errorMessage: /#\s+(.*error|can't.*)/im,
   singleWhiteSpace: /\s/g,
   multipleWhiteSpace: /\s\s+/g
@@ -131,9 +134,11 @@ class RedisServer extends events.EventEmitter {
    * @return {Object}
    */
   static parseData(string) {
-    const matches = regExp.terminalMessage.exec(string);
+    const matches = regExp.terminalMessages
+      .map((re) => re.exec(string))
+      .find((m) => m !== null);
 
-    if (matches === null) {
+    if (matches == null) {
       return null;
     }
 
