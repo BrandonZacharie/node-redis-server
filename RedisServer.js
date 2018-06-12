@@ -49,7 +49,9 @@ const regExp = {
     /already\s+in\s+use|not\s+listen|error|denied|can't/im
   ],
   errorMessage: /#\s+(.*error|can't.*)/im,
-  singleWhiteSpace: /\s/g,
+  comma: /,/g,
+  quoteMark: /'/g,
+  whiteSpace: /\s/g,
   multipleWhiteSpace: /\s\s+/g
 };
 
@@ -142,11 +144,13 @@ class RedisServer extends events.EventEmitter {
       return null;
     }
 
+    const match = matches.pop();
     const result = {
       err: null,
-      key: matches
-        .pop()
-        .replace(regExp.singleWhiteSpace, '')
+      key: match
+        .replace(regExp.whiteSpace, '')
+        .replace(regExp.quoteMark, '')
+        .replace(regExp.comma, '')
         .toLowerCase()
     };
 
@@ -172,7 +176,7 @@ class RedisServer extends events.EventEmitter {
 
         break;
 
-      case 'can\'t':
+      case 'cant':
       case 'error':
         result.err = new Error(
           regExp.errorMessage
