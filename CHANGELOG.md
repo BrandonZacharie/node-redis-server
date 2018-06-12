@@ -8,6 +8,11 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### [Unreleased][]
 
+### [1.2.2][] — 2018-06-12
+
+- `#open()` returning a rejected promise due to a "Server can't set maximum
+  open files" error
+
 ### [1.2.1][] — 2018-06-07
 
 #### Changed
@@ -175,7 +180,8 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 - Initial release
 
-[Unreleased]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.1...HEAD
+[Unreleased]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.2...HEAD
+[1.2.2]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/BrandonZacharie/node-redis-server/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/BrandonZacharie/node-redis-server/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/BrandonZacharie/node-redis-server/compare/1.0.0...1.1.0

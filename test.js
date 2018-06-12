@@ -333,6 +333,25 @@ describe('RedisServer', () => {
       expect(result).to.have.property('err').equal(null);
       expect(result).to.have.property('key').equal('readytoaccept');
     });
+    it('does not parse a "Server can\'t set maximum open files" error', () => {
+      const result = RedisServer.parseData(
+        '3105:M 30 May 17:46:28.529 # Server can\'t set maximum open \
+        files to 10032 because of OS error: Operation not permitted.'
+      );
+
+      expect(result).to.equal(null);
+    });
+    it('parses other errors ignoring any warning errors', () => {
+      const result = RedisServer.parseData(
+        '3105:M 30 May 17:46:28.529 # Server can\'t set maximum open \
+        files to 10032 because of OS error: Operation not permitted. \
+        26939: C 06 Jan 12: 15: 11.241 # Fatal error, can\'t open \
+        config file \'node_databases\''
+      );
+
+      expect(result).to.be.an('object').and.have.property('err');
+      expect(result.err).be.an('error').with.property('code').equal(-3);
+    });
   });
   describe('#constructor()', () => {
     it('constructs a new instance', () => {
