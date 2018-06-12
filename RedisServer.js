@@ -46,10 +46,12 @@ const PromiseQueue = require('promise-queue');
 const regExp = {
   terminalMessages: [
     /ready\s+to\s+accept/im,
+    /can't\s+set\s+maximum\s+open\s+files\s+to\s+\d+\s+because\s+of\s+OS\s+error/im,
     /already\s+in\s+use|not\s+listen|error|denied|can't/im
   ],
   errorMessage: /#\s+(.*error|can't.*)/im,
   comma: /,/g,
+  digit: /\d+/g,
   quoteMark: /'/g,
   whiteSpace: /\s/g,
   multipleWhiteSpace: /\s\s+/g
@@ -151,6 +153,7 @@ class RedisServer extends events.EventEmitter {
         .replace(regExp.whiteSpace, '')
         .replace(regExp.quoteMark, '')
         .replace(regExp.comma, '')
+        .replace(regExp.digit, '')
         .toLowerCase()
     };
 
@@ -187,6 +190,9 @@ class RedisServer extends events.EventEmitter {
         result.err.code = -3;
 
         break;
+
+      case 'cantsetmaximumopenfilestobecauseofoserror':
+        return this.parseData(string.replace(match, ''));
     }
 
     return result;
